@@ -18,9 +18,9 @@ COPY packages/database/ ./packages/database/
 COPY packages/shared/ ./packages/shared/
 COPY apps/api/ ./apps/api/
 
-# Build
+# Build API (explicit commands - no dts generation needed for API server)
 WORKDIR /app/apps/api
-RUN pnpm build
+RUN npx tsup src/index.ts --format esm
 
 # Run
 EXPOSE 3001
