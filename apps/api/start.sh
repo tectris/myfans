@@ -2,7 +2,9 @@
 set -e
 
 echo "=== Running database schema push ==="
-npx drizzle-kit push --force --config=../../packages/database/drizzle.config.ts
+cd /app/packages/database
+npx drizzle-kit push --force
+cd /app/apps/api
 echo "=== Database schema push complete ==="
 
 if [ -n "$ADMIN_EMAIL" ]; then
