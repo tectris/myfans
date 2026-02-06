@@ -19,6 +19,17 @@ export async function createPost(creatorId: string, input: CreatePostInput) {
     })
     .returning()
 
+  if (input.media && input.media.length > 0) {
+    for (let i = 0; i < input.media.length; i++) {
+      const m = input.media[i]
+      await addMediaToPost(post.id, {
+        mediaType: m.mediaType,
+        storageKey: m.key,
+        sortOrder: i,
+      })
+    }
+  }
+
   return post
 }
 
@@ -107,6 +118,11 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
     .where(and(eq(subscriptions.fanId, userId), eq(subscriptions.status, 'active')))
 
   const creatorIds = subscribedCreators.map((s) => s.creatorId)
+
+  // Always include own posts in feed
+  if (!creatorIds.includes(userId)) {
+    creatorIds.push(userId)
+  }
 
   if (creatorIds.length === 0) {
     return { posts: [], total: 0 }

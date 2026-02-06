@@ -108,6 +108,32 @@ class ApiClient {
   delete<T>(path: string) {
     return this.request<T>(path, { method: 'DELETE' })
   }
+
+  async upload<T>(path: string, file: File): Promise<ApiResponse<T>> {
+    const token = this.getToken()
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const res = await fetch(`${API_URL}/api/v1${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+
+    const json = await res.json()
+    if (!res.ok) {
+      throw new ApiError(json.error?.code || 'UNKNOWN', json.error?.message || 'Erro desconhecido', res.status)
+    }
+    return json
+  }
+
+  getMediaUrl(key: string): string {
+    if (key.startsWith('http')) return key
+    return `${API_URL}/api/v1/media/${key}`
+  }
 }
 
 export class ApiError extends Error {

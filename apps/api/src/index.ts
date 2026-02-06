@@ -14,6 +14,8 @@ import fancoins from './routes/fancoins'
 import gamification from './routes/gamification'
 import discovery from './routes/discovery'
 import feed from './routes/feed'
+import media from './routes/media'
+import admin from './routes/admin'
 
 const app = new Hono().basePath('/api/v1')
 
@@ -49,6 +51,8 @@ app.route('/fancoins', fancoins)
 app.route('/gamification', gamification)
 app.route('/discover', discovery)
 app.route('/feed', feed)
+app.route('/media', media)
+app.route('/admin', admin)
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 

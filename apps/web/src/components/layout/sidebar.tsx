@@ -5,15 +5,12 @@ import { usePathname } from 'next/navigation'
 import {
   Home,
   Compass,
-  Heart,
   MessageCircle,
   Coins,
-  Trophy,
   BarChart3,
   Settings,
-  Bookmark,
-  Swords,
   Plus,
+  Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/lib/store'
@@ -36,13 +33,28 @@ const creatorLinks = [
   { href: '/settings', icon: Settings, label: 'Configuracoes' },
 ]
 
+const adminLinks = [
+  { href: '/admin', icon: Shield, label: 'Admin' },
+  { href: '/creator/content', icon: Plus, label: 'Novo post' },
+  { href: '/feed', icon: Home, label: 'Feed' },
+  { href: '/explore', icon: Compass, label: 'Explorar' },
+  { href: '/messages', icon: MessageCircle, label: 'Mensagens' },
+  { href: '/wallet', icon: Coins, label: 'FanCoins' },
+  { href: '/settings', icon: Settings, label: 'Configuracoes' },
+]
+
 export function Sidebar() {
   const pathname = usePathname()
   const { user, isAuthenticated } = useAuthStore()
 
   if (!isAuthenticated) return null
 
-  const links = user?.role === 'creator' ? creatorLinks : fanLinks
+  const links =
+    user?.role === 'admin'
+      ? adminLinks
+      : user?.role === 'creator'
+        ? creatorLinks
+        : fanLinks
 
   return (
     <aside className="hidden md:flex flex-col w-56 shrink-0 sticky top-16 h-[calc(100vh-4rem)] py-4 px-3 border-r border-border">

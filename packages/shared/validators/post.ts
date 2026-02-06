@@ -7,6 +7,14 @@ export const createPostSchema = z.object({
   tierId: z.string().uuid().optional(),
   ppvPrice: z.number().min(1).max(10000).optional(),
   scheduledAt: z.string().datetime().optional(),
+  media: z
+    .array(
+      z.object({
+        key: z.string(),
+        mediaType: z.string(),
+      }),
+    )
+    .optional(),
 })
 
 export const updatePostSchema = z.object({
