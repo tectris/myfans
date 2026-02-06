@@ -23,7 +23,7 @@ export default function FeedPage() {
   })
 
   const editMutation = useMutation({
-    mutationFn: ({ postId, data }: { postId: string; data: { contentText: string } }) =>
+    mutationFn: ({ postId, data }: { postId: string; data: Record<string, unknown> }) =>
       api.patch(`/posts/${postId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] })
@@ -39,6 +39,37 @@ export default function FeedPage() {
       toast.success('Post excluido!')
     },
     onError: (e: any) => toast.error(e.message || 'Erro ao excluir'),
+  })
+
+  const likeMutation = useMutation({
+    mutationFn: (postId: string) => api.post(`/posts/${postId}/like`, {}),
+    onError: (e: any) => toast.error(e.message || 'Erro ao curtir'),
+  })
+
+  const bookmarkMutation = useMutation({
+    mutationFn: (postId: string) => api.post(`/posts/${postId}/bookmark`, {}),
+    onError: (e: any) => toast.error(e.message || 'Erro ao salvar'),
+  })
+
+  const commentMutation = useMutation({
+    mutationFn: ({ postId, content }: { postId: string; content: string }) =>
+      api.post(`/posts/${postId}/comments`, { content }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['feed'] })
+      queryClient.invalidateQueries({ queryKey: ['comments', variables.postId] })
+      toast.success('Comentario adicionado!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao comentar'),
+  })
+
+  const tipMutation = useMutation({
+    mutationFn: ({ postId, creatorId, amount }: { postId: string; creatorId: string; amount: number }) =>
+      api.post('/fancoins/tip', { creatorId, amount, referenceId: postId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fancoin-wallet'] })
+      toast.success('Tip enviado com sucesso!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao enviar tip'),
   })
 
   const isCreatorOrAdmin = user?.role === 'creator' || user?.role === 'admin'
@@ -88,12 +119,16 @@ export default function FeedPage() {
       ) : data?.posts && data.posts.length > 0 ? (
         <div>
           {data.posts.map((post: any) => (
-            <PostCard
+            <FeedPostCard
               key={post.id}
               post={post}
               currentUserId={user?.id}
               onEdit={(postId, editData) => editMutation.mutate({ postId, data: editData })}
               onDelete={(postId) => deleteMutation.mutate(postId)}
+              onLike={(postId) => likeMutation.mutate(postId)}
+              onBookmark={(postId) => bookmarkMutation.mutate(postId)}
+              onComment={(postId, content) => commentMutation.mutate({ postId, content })}
+              onTip={(postId, creatorId, amount) => tipMutation.mutate({ postId, creatorId, amount })}
             />
           ))}
         </div>
@@ -121,5 +156,49 @@ export default function FeedPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function FeedPostCard({
+  post,
+  currentUserId,
+  onEdit,
+  onDelete,
+  onLike,
+  onBookmark,
+  onComment,
+  onTip,
+}: {
+  post: any
+  currentUserId?: string | null
+  onEdit: (postId: string, data: Record<string, unknown>) => void
+  onDelete: (postId: string) => void
+  onLike: (postId: string) => void
+  onBookmark: (postId: string) => void
+  onComment: (postId: string, content: string) => void
+  onTip: (postId: string, creatorId: string, amount: number) => void
+}) {
+  const { data: commentsData } = useQuery({
+    queryKey: ['comments', post.id],
+    queryFn: async () => {
+      const res = await api.get<any>(`/posts/${post.id}/comments`)
+      return res.data
+    },
+  })
+
+  const comments = commentsData?.comments || commentsData || []
+
+  return (
+    <PostCard
+      post={post}
+      currentUserId={currentUserId}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onLike={onLike}
+      onBookmark={onBookmark}
+      onComment={onComment}
+      onTip={onTip}
+      comments={Array.isArray(comments) ? comments : []}
+    />
   )
 }

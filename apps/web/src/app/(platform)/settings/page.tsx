@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -12,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Avatar } from '@/components/ui/avatar'
 import { StreakCounter } from '@/components/gamification/streak-counter'
 import { LevelBadge } from '@/components/gamification/level-badge'
-import { Settings, User, LogOut } from 'lucide-react'
+import { Settings, User, LogOut, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function SettingsPage() {
@@ -44,6 +45,36 @@ export default function SettingsPage() {
     },
     onError: (e: any) => toast.error(e.message),
   })
+
+  // Password change
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const passwordMutation = useMutation({
+    mutationFn: (data: { currentPassword: string; newPassword: string }) =>
+      api.patch('/users/me/password', data),
+    onSuccess: () => {
+      toast.success('Senha alterada com sucesso!')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    },
+    onError: (e: any) => toast.error(e.message),
+  })
+
+  function handlePasswordChange(e: React.FormEvent) {
+    e.preventDefault()
+    if (newPassword !== confirmPassword) {
+      toast.error('As senhas nao coincidem')
+      return
+    }
+    if (newPassword.length < 6) {
+      toast.error('Nova senha deve ter pelo menos 6 caracteres')
+      return
+    }
+    passwordMutation.mutate({ currentPassword, newPassword })
+  }
 
   function handleLogout() {
     api.setToken(null)
@@ -110,6 +141,44 @@ export default function SettingsPage() {
             </div>
             <Button type="submit" loading={updateMutation.isPending}>
               Salvar
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Change password */}
+      <Card className="mb-6">
+        <CardHeader>
+          <h2 className="font-bold flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-primary" />
+            Alterar senha
+          </h2>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <Input
+              id="currentPassword"
+              label="Senha atual"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+            <Input
+              id="newPassword"
+              label="Nova senha"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <Input
+              id="confirmPassword"
+              label="Confirmar nova senha"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            <Button type="submit" loading={passwordMutation.isPending}>
+              Alterar senha
             </Button>
           </form>
         </CardContent>

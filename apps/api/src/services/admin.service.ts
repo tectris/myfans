@@ -76,6 +76,18 @@ export async function updateUser(
     throw new AppError('INVALID_ROLE', 'Role invalido', 400)
   }
 
+  // Protect admin users from being deactivated
+  if (updates.isActive === false) {
+    const [target] = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    if (target?.role === 'admin') {
+      throw new AppError('FORBIDDEN', 'Nao e possivel desativar um admin', 403)
+    }
+  }
+
   const setData: Record<string, unknown> = { updatedAt: new Date() }
   if (updates.role !== undefined) setData.role = updates.role
   if (updates.isActive !== undefined) setData.isActive = updates.isActive
