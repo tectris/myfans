@@ -17,12 +17,23 @@ import feed from './routes/feed'
 
 const app = new Hono().basePath('/api/v1')
 
+const allowedOrigins = [
+  env.NEXT_PUBLIC_APP_URL,
+  'http://localhost:3000',
+  ...(env.CORS_ORIGINS ? env.CORS_ORIGINS.split(',').map((o) => o.trim()) : []),
+]
+  .map((o) => o.replace(/\/+$/, ''))
+  .filter(Boolean)
+
 app.use('*', logger())
 app.use('*', secureHeaders())
 app.use(
   '*',
   cors({
-    origin: [env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000'],
+    origin: (origin) => {
+      if (allowedOrigins.includes(origin)) return origin
+      return allowedOrigins[0]
+    },
     credentials: true,
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
