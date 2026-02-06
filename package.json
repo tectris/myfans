@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "dev": "turbo dev",
-    "build": "turbo build",
+    "build": "pnpm --filter @myfans/api build",
+    "start": "cd apps/api && node dist/index.js",
+    "build:all": "turbo build",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "db:generate": "turbo db:generate",
