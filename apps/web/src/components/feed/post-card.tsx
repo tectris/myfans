@@ -1,6 +1,7 @@
 'use client'
 
-import { Heart, MessageCircle, Bookmark, Share2, Lock, Coins } from 'lucide-react'
+import { useState } from 'react'
+import { Heart, MessageCircle, Bookmark, Lock, Coins, MoreHorizontal, Pencil, Trash2, X, Check } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,7 @@ interface PostCardProps {
     commentCount: number
     viewCount: number
     publishedAt: string
+    creatorId?: string
     creatorUsername: string
     creatorDisplayName: string | null
     creatorAvatarUrl: string | null
@@ -33,13 +35,33 @@ interface PostCardProps {
     isLiked?: boolean
     isBookmarked?: boolean
   }
+  currentUserId?: string | null
   onLike?: (postId: string) => void
   onBookmark?: (postId: string) => void
+  onEdit?: (postId: string, data: { contentText: string }) => void
+  onDelete?: (postId: string) => void
 }
 
-export function PostCard({ post, onLike, onBookmark }: PostCardProps) {
+export function PostCard({ post, currentUserId, onLike, onBookmark, onEdit, onDelete }: PostCardProps) {
   const hasMedia = post.media && post.media.length > 0
   const isLocked = post.visibility !== 'public' && !post.hasAccess
+  const isOwner = currentUserId && post.creatorId === currentUserId
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(post.contentText || '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  function handleEdit() {
+    onEdit?.(post.id, { contentText: editText })
+    setEditing(false)
+    setMenuOpen(false)
+  }
+
+  function handleDelete() {
+    onDelete?.(post.id)
+    setConfirmDelete(false)
+    setMenuOpen(false)
+  }
 
   return (
     <Card className="mb-4">
@@ -58,12 +80,74 @@ export function PostCard({ post, onLike, onBookmark }: PostCardProps) {
         {post.visibility === 'ppv' && post.ppvPrice && (
           <Badge variant="warning">{formatCurrency(post.ppvPrice)}</Badge>
         )}
+        {isOwner && (
+          <div className="relative">
+            <button
+              onClick={() => { setMenuOpen(!menuOpen); setConfirmDelete(false) }}
+              className="p-1.5 rounded-sm text-muted hover:text-foreground hover:bg-surface-light transition-colors"
+            >
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-surface border border-border rounded-sm shadow-lg py-1 min-w-[140px]">
+                  <button
+                    onClick={() => { setEditing(true); setMenuOpen(false) }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-light transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Editar
+                  </button>
+                  {!confirmDelete ? (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-error hover:bg-surface-light transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Excluir
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleDelete}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-error font-semibold hover:bg-error/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Confirmar exclusao
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {post.contentText && (
+      {editing ? (
         <div className="px-4 pb-3">
-          <p className="text-sm whitespace-pre-wrap">{post.contentText}</p>
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 rounded-sm bg-surface-light border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
+          />
+          <div className="flex gap-2 mt-2">
+            <Button size="sm" onClick={handleEdit}>
+              <Check className="w-4 h-4 mr-1" />
+              Salvar
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setEditText(post.contentText || '') }}>
+              <X className="w-4 h-4 mr-1" />
+              Cancelar
+            </Button>
+          </div>
         </div>
+      ) : (
+        post.contentText && (
+          <div className="px-4 pb-3">
+            <p className="text-sm whitespace-pre-wrap">{post.contentText}</p>
+          </div>
+        )
       )}
 
       {hasMedia && (

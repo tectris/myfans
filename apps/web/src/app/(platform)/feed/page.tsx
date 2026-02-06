@@ -1,15 +1,17 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { PostCard } from '@/components/feed/post-card'
 import { useAuthStore } from '@/lib/store'
-import { Flame, TrendingUp } from 'lucide-react'
+import { Flame, TrendingUp, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 export default function FeedPage() {
-  const { isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
+  const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
     queryKey: ['feed', isAuthenticated ? 'personal' : 'public'],
@@ -20,6 +22,27 @@ export default function FeedPage() {
     },
   })
 
+  const editMutation = useMutation({
+    mutationFn: ({ postId, data }: { postId: string; data: { contentText: string } }) =>
+      api.patch(`/posts/${postId}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed'] })
+      toast.success('Post atualizado!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao editar'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (postId: string) => api.delete(`/posts/${postId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed'] })
+      toast.success('Post excluido!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao excluir'),
+  })
+
+  const isCreatorOrAdmin = user?.role === 'creator' || user?.role === 'admin'
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
@@ -27,14 +50,24 @@ export default function FeedPage() {
           <Flame className="w-6 h-6 text-primary" />
           {isAuthenticated ? 'Seu Feed' : 'Destaques'}
         </h1>
-        {isAuthenticated && (
-          <Link href="/explore">
-            <Button variant="outline" size="sm">
-              <TrendingUp className="w-4 h-4 mr-1" />
-              Explorar
-            </Button>
-          </Link>
-        )}
+        <div className="flex gap-2">
+          {isCreatorOrAdmin && (
+            <Link href="/creator/content">
+              <Button size="sm">
+                <Plus className="w-4 h-4 mr-1" />
+                Novo post
+              </Button>
+            </Link>
+          )}
+          {isAuthenticated && (
+            <Link href="/explore">
+              <Button variant="outline" size="sm">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                Explorar
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -55,7 +88,13 @@ export default function FeedPage() {
       ) : data?.posts && data.posts.length > 0 ? (
         <div>
           {data.posts.map((post: any) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard
+              key={post.id}
+              post={post}
+              currentUserId={user?.id}
+              onEdit={(postId, editData) => editMutation.mutate({ postId, data: editData })}
+              onDelete={(postId) => deleteMutation.mutate(postId)}
+            />
           ))}
         </div>
       ) : (
@@ -63,11 +102,22 @@ export default function FeedPage() {
           <Flame className="w-16 h-16 text-muted mx-auto mb-4" />
           <h2 className="text-lg font-semibold mb-2">Seu feed esta vazio</h2>
           <p className="text-muted text-sm mb-6">
-            Assine criadores para ver o conteudo deles aqui
+            {isCreatorOrAdmin
+              ? 'Crie seu primeiro post!'
+              : 'Assine criadores para ver o conteudo deles aqui'}
           </p>
-          <Link href="/explore">
-            <Button>Explorar criadores</Button>
-          </Link>
+          {isCreatorOrAdmin ? (
+            <Link href="/creator/content">
+              <Button>
+                <Plus className="w-4 h-4 mr-1" />
+                Criar post
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/explore">
+              <Button>Explorar criadores</Button>
+            </Link>
+          )}
         </div>
       )}
     </div>
