@@ -59,7 +59,8 @@ app.notFound((c) => {
   return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Rota nao encontrada' } }, 404)
 })
 
-console.log(`MyFans API running on port ${env.PORT}`)
-serve({ fetch: app.fetch, port: env.PORT })
+const port = Number(process.env.PORT) || env.PORT
+console.log(`MyFans API running on 0.0.0.0:${port}`)
+serve({ fetch: app.fetch, port, hostname: '0.0.0.0' })
 
 export default app
