@@ -14,7 +14,7 @@ ARG CACHEBUST=1
 
 # Build API with workspace packages bundled inline
 WORKDIR /app/apps/api
-RUN npx tsup src/index.ts --format esm --noExternal @myfans/shared --noExternal @myfans/database
+RUN npx tsup
 
 # Verify the bundle doesn't reference shared package at runtime
 RUN node -e "const fs=require('fs');const f=fs.readFileSync('dist/index.js','utf8');if(f.includes('@myfans/shared')){console.error('ERROR: bundle still references @myfans/shared');process.exit(1)}else{console.log('OK: workspace packages bundled inline')}"
