@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "pnpm --filter @myfans/api build",
-    "start": "cd apps/api && node dist/index.js",
+    "start": "node apps/api/dist/index.js",
     "build:all": "turbo build",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
