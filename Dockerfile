@@ -20,7 +20,7 @@ COPY apps/api/ ./apps/api/
 
 # Build API (explicit commands - no dts generation needed for API server)
 WORKDIR /app/apps/api
-RUN npx tsup src/index.ts --format esm
+RUN npx tsup src/index.ts --format esm --noExternal @myfans/shared --noExternal @myfans/database
 
 # Run
 EXPOSE 3001
