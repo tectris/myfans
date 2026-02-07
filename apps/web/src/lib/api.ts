@@ -1,5 +1,7 @@
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-const API_URL = rawApiUrl.replace(/\/api\/v1\/?$/, '')
+// Ensure protocol is present (handles case where env var is set to "api.myfans.my" without https://)
+const normalizedUrl = rawApiUrl.match(/^https?:\/\//) ? rawApiUrl : `https://${rawApiUrl}`
+const API_URL = normalizedUrl.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '')
 
 type ApiResponse<T> = {
   success: boolean
