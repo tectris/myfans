@@ -20,12 +20,19 @@ import admin from './routes/admin'
 
 const app = new Hono().basePath('/api/v1')
 
+function normalizeOrigin(url: string): string {
+  const trimmed = url.trim().replace(/\/+$/, '')
+  if (!trimmed) return trimmed
+  if (/^https?:\/\//.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 const allowedOrigins = [
   env.NEXT_PUBLIC_APP_URL,
   'http://localhost:3000',
   ...(env.CORS_ORIGINS ? env.CORS_ORIGINS.split(',').map((o) => o.trim()) : []),
 ]
-  .map((o) => o.replace(/\/+$/, ''))
+  .map(normalizeOrigin)
   .filter(Boolean)
 
 app.use('*', logger())
