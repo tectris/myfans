@@ -18,6 +18,7 @@ import {
   EyeOff,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
+import { VideoPlayer } from '@/components/ui/video-player'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -325,7 +326,11 @@ export function PostCard({
                 <img src={post.media[0].storageKey} alt="" className="w-full h-full object-cover" />
               )}
               {post.media?.[0]?.mediaType === 'video' && post.media[0].storageKey && (
-                <video src={post.media[0].storageKey} controls className="w-full h-full object-cover" />
+                <VideoPlayer
+                  src={post.media[0].storageKey}
+                  poster={post.media[0].thumbnailUrl || undefined}
+                  className="w-full h-full object-cover"
+                />
               )}
             </div>
           )}
