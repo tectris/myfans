@@ -23,7 +23,7 @@ type UploadedMedia = {
 export default function CreateContentPage() {
   const router = useRouter()
   const { user } = useAuthStore()
-  const kycApproved = user?.kycStatus === 'approved'
+  const kycApproved = user?.kycStatus === 'approved' || user?.role === 'admin'
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [mediaFiles, setMediaFiles] = useState<UploadedMedia[]>([])
