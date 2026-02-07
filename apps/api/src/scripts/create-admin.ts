@@ -29,12 +29,12 @@ async function createAdmin() {
     .limit(1)
 
   if (existing.length > 0) {
-    console.log(`Admin user already exists (${ADMIN_EMAIL}). Updating role to admin...`)
+    console.log(`Admin user already exists (${ADMIN_EMAIL}). Updating role and KYC to admin...`)
     await db
       .update(users)
       .set({ role: 'admin', kycStatus: 'approved' })
       .where(eq(users.email, ADMIN_EMAIL))
-    console.log('Admin role updated! KYC set to approved.')
+    console.log('Admin role and KYC updated!')
     return
   }
 
@@ -48,9 +48,9 @@ async function createAdmin() {
       displayName: ADMIN_DISPLAY_NAME,
       passwordHash,
       role: 'admin',
-      kycStatus: 'approved',
       emailVerified: true,
       isActive: true,
+      kycStatus: 'approved',
       dateOfBirth: '1990-01-01',
     })
     .returning({ id: users.id, email: users.email, username: users.username })
