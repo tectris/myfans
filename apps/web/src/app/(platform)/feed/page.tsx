@@ -43,11 +43,13 @@ export default function FeedPage() {
 
   const likeMutation = useMutation({
     mutationFn: (postId: string) => api.post(`/posts/${postId}/like`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
     onError: (e: any) => toast.error(e.message || 'Erro ao curtir'),
   })
 
   const bookmarkMutation = useMutation({
     mutationFn: (postId: string) => api.post(`/posts/${postId}/bookmark`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
     onError: (e: any) => toast.error(e.message || 'Erro ao salvar'),
   })
 
@@ -181,8 +183,6 @@ function FeedPostCard({
   onComment: (postId: string, content: string) => void
   onTip: (postId: string, creatorId: string, amount: number) => void
 }) {
-  const loginRedirect = () => { window.location.href = '/login' }
-
   const { data: commentsData } = useQuery({
     queryKey: ['comments', post.id],
     queryFn: async () => {
@@ -197,12 +197,13 @@ function FeedPostCard({
     <PostCard
       post={post}
       currentUserId={currentUserId}
+      isAuthenticated={isAuthenticated}
       onEdit={onEdit}
       onDelete={onDelete}
-      onLike={isAuthenticated ? onLike : loginRedirect}
-      onBookmark={isAuthenticated ? onBookmark : loginRedirect}
-      onComment={isAuthenticated ? onComment : () => loginRedirect()}
-      onTip={isAuthenticated ? onTip : () => loginRedirect()}
+      onLike={onLike}
+      onBookmark={onBookmark}
+      onComment={onComment}
+      onTip={onTip}
       comments={Array.isArray(comments) ? comments : []}
     />
   )
