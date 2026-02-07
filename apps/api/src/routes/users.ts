@@ -32,6 +32,24 @@ usersRoute.patch('/me', authMiddleware, validateBody(updateProfileSchema), async
   }
 })
 
+usersRoute.patch('/me/password', authMiddleware, async (c) => {
+  try {
+    const { userId } = c.get('user')
+    const { currentPassword, newPassword } = await c.req.json()
+    if (!currentPassword || !newPassword) {
+      return error(c, 400, 'MISSING_FIELDS', 'Senha atual e nova senha obrigatorias')
+    }
+    if (newPassword.length < 6) {
+      return error(c, 400, 'WEAK_PASSWORD', 'Nova senha deve ter pelo menos 6 caracteres')
+    }
+    const result = await userService.changePassword(userId, currentPassword, newPassword)
+    return success(c, result)
+  } catch (e) {
+    if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)
+    throw e
+  }
+})
+
 usersRoute.get('/me/settings', authMiddleware, async (c) => {
   const { userId } = c.get('user')
   const settings = await userService.getSettings(userId)

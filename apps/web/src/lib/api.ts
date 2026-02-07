@@ -1,4 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_URL = rawApiUrl.replace(/\/api\/v1\/?$/, '')
 
 type ApiResponse<T> = {
   success: boolean
@@ -88,6 +89,7 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
+      localStorage.removeItem('user')
       window.location.href = '/login'
     }
   }
@@ -106,6 +108,32 @@ class ApiClient {
 
   delete<T>(path: string) {
     return this.request<T>(path, { method: 'DELETE' })
+  }
+
+  async upload<T>(path: string, file: File): Promise<ApiResponse<T>> {
+    const token = this.getToken()
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const res = await fetch(`${API_URL}/api/v1${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+
+    const json = await res.json()
+    if (!res.ok) {
+      throw new ApiError(json.error?.code || 'UNKNOWN', json.error?.message || 'Erro desconhecido', res.status)
+    }
+    return json
+  }
+
+  getMediaUrl(key: string): string {
+    if (key.startsWith('http')) return key
+    return `${API_URL}/api/v1/media/${key}`
   }
 }
 

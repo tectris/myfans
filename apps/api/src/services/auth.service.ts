@@ -42,7 +42,9 @@ export async function register(input: RegisterInput) {
       email: users.email,
       username: users.username,
       displayName: users.displayName,
+      avatarUrl: users.avatarUrl,
       role: users.role,
+      kycStatus: users.kycStatus,
     })
 
   if (!user) throw new AppError('INTERNAL', 'Erro ao criar usuario', 500)
@@ -92,10 +94,30 @@ export async function login(input: LoginInput) {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       role: user.role,
+      kycStatus: user.kycStatus,
     },
     accessToken,
     refreshToken,
   }
+}
+
+export async function getMe(userId: string) {
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      username: users.username,
+      displayName: users.displayName,
+      avatarUrl: users.avatarUrl,
+      role: users.role,
+      kycStatus: users.kycStatus,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  if (!user) throw new AppError('NOT_FOUND', 'Usuario nao encontrado', 404)
+  return user
 }
 
 export async function refreshTokens(token: string) {

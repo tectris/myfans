@@ -20,4 +20,4 @@ RUN npx tsup
 RUN node -e "const fs=require('fs');const f=fs.readFileSync('dist/index.js','utf8');if(f.includes('@myfans/shared')){console.error('ERROR: bundle still references @myfans/shared');process.exit(1)}else{console.log('OK: workspace packages bundled inline')}"
 
 EXPOSE 3001
-CMD ["node", "dist/index.js"]
+CMD ["sh", "start.sh"]

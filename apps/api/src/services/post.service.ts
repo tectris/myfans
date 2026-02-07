@@ -5,6 +5,23 @@ import { AppError } from './auth.service'
 import type { CreatePostInput, UpdatePostInput } from '@myfans/shared'
 
 export async function createPost(creatorId: string, input: CreatePostInput) {
+  // Block media upload for users without KYC verification
+  if (input.media && input.media.length > 0) {
+    const [creator] = await db
+      .select({ kycStatus: users.kycStatus })
+      .from(users)
+      .where(eq(users.id, creatorId))
+      .limit(1)
+
+    if (!creator || creator.kycStatus !== 'approved') {
+      throw new AppError(
+        'KYC_REQUIRED',
+        'Verificacao de identidade necessaria para postar imagens e videos',
+        403,
+      )
+    }
+  }
+
   const [post] = await db
     .insert(posts)
     .values({
@@ -19,6 +36,17 @@ export async function createPost(creatorId: string, input: CreatePostInput) {
     })
     .returning()
 
+  if (input.media && input.media.length > 0) {
+    for (let i = 0; i < input.media.length; i++) {
+      const m = input.media[i]
+      await addMediaToPost(post.id, {
+        mediaType: m.mediaType,
+        storageKey: m.key,
+        sortOrder: i,
+      })
+    }
+  }
+
   return post
 }
 
@@ -30,6 +58,11 @@ export async function getPost(postId: string, viewerId?: string) {
     .limit(1)
 
   if (!post) throw new AppError('NOT_FOUND', 'Post nao encontrado', 404)
+
+  // Hidden posts are only visible to their creator
+  if (!post.isVisible && viewerId !== post.creatorId) {
+    throw new AppError('NOT_FOUND', 'Post nao encontrado', 404)
+  }
 
   const media = await db
     .select()
@@ -108,6 +141,11 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
 
   const creatorIds = subscribedCreators.map((s) => s.creatorId)
 
+  // Always include own posts in feed
+  if (!creatorIds.includes(userId)) {
+    creatorIds.push(userId)
+  }
+
   if (creatorIds.length === 0) {
     return { posts: [], total: 0 }
   }
@@ -120,6 +158,7 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
       postType: posts.postType,
       visibility: posts.visibility,
       ppvPrice: posts.ppvPrice,
+      isVisible: posts.isVisible,
       likeCount: posts.likeCount,
       commentCount: posts.commentCount,
       tipCount: posts.tipCount,
@@ -131,7 +170,13 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
     })
     .from(posts)
     .innerJoin(users, eq(posts.creatorId, users.id))
-    .where(and(inArray(posts.creatorId, creatorIds), eq(posts.isArchived, false)))
+    .where(
+      and(
+        inArray(posts.creatorId, creatorIds),
+        eq(posts.isArchived, false),
+        or(eq(posts.isVisible, true), eq(posts.creatorId, userId)),
+      ),
+    )
     .orderBy(desc(posts.publishedAt))
     .limit(limit)
     .offset(offset)
@@ -142,9 +187,23 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
       ? await db.select().from(postMedia).where(inArray(postMedia.postId, postIds)).orderBy(postMedia.sortOrder)
       : []
 
+  const userLikes =
+    postIds.length > 0
+      ? await db.select({ postId: postLikes.postId }).from(postLikes).where(and(eq(postLikes.userId, userId), inArray(postLikes.postId, postIds)))
+      : []
+  const likedPostIds = new Set(userLikes.map((l) => l.postId))
+
+  const userBookmarks =
+    postIds.length > 0
+      ? await db.select({ postId: postBookmarks.postId }).from(postBookmarks).where(and(eq(postBookmarks.userId, userId), inArray(postBookmarks.postId, postIds)))
+      : []
+  const bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
+
   const postsWithMedia = feedPosts.map((post) => ({
     ...post,
     media: allMedia.filter((m) => m.postId === post.id),
+    isLiked: likedPostIds.has(post.id),
+    isBookmarked: bookmarkedPostIds.has(post.id),
   }))
 
   return { posts: postsWithMedia, total: feedPosts.length }
@@ -170,7 +229,7 @@ export async function getPublicFeed(page = 1, limit = 20) {
     })
     .from(posts)
     .innerJoin(users, eq(posts.creatorId, users.id))
-    .where(and(eq(posts.visibility, 'public'), eq(posts.isArchived, false)))
+    .where(and(eq(posts.visibility, 'public'), eq(posts.isArchived, false), eq(posts.isVisible, true)))
     .orderBy(desc(posts.publishedAt))
     .limit(limit)
     .offset(offset)
@@ -189,6 +248,69 @@ export async function getPublicFeed(page = 1, limit = 20) {
   return { posts: postsWithMedia, total: feedPosts.length }
 }
 
+export async function getCreatorPosts(creatorId: string, viewerId?: string, page = 1, limit = 20) {
+  const offset = (page - 1) * limit
+  const isOwner = viewerId === creatorId
+
+  const conditions = [eq(posts.creatorId, creatorId), eq(posts.isArchived, false)]
+  if (!isOwner) {
+    conditions.push(eq(posts.visibility, 'public'))
+    conditions.push(eq(posts.isVisible, true))
+  }
+
+  const feedPosts = await db
+    .select({
+      id: posts.id,
+      creatorId: posts.creatorId,
+      contentText: posts.contentText,
+      postType: posts.postType,
+      visibility: posts.visibility,
+      ppvPrice: posts.ppvPrice,
+      isVisible: posts.isVisible,
+      likeCount: posts.likeCount,
+      commentCount: posts.commentCount,
+      tipCount: posts.tipCount,
+      viewCount: posts.viewCount,
+      isPinned: posts.isPinned,
+      publishedAt: posts.publishedAt,
+      creatorUsername: users.username,
+      creatorDisplayName: users.displayName,
+      creatorAvatarUrl: users.avatarUrl,
+    })
+    .from(posts)
+    .innerJoin(users, eq(posts.creatorId, users.id))
+    .where(and(...conditions))
+    .orderBy(desc(posts.isPinned), desc(posts.publishedAt))
+    .limit(limit)
+    .offset(offset)
+
+  const postIds = feedPosts.map((p) => p.id)
+  const allMedia =
+    postIds.length > 0
+      ? await db.select().from(postMedia).where(inArray(postMedia.postId, postIds)).orderBy(postMedia.sortOrder)
+      : []
+
+  let likedPostIds = new Set<string>()
+  let bookmarkedPostIds = new Set<string>()
+
+  if (viewerId && postIds.length > 0) {
+    const userLikes = await db.select({ postId: postLikes.postId }).from(postLikes).where(and(eq(postLikes.userId, viewerId), inArray(postLikes.postId, postIds)))
+    likedPostIds = new Set(userLikes.map((l) => l.postId))
+
+    const userBookmarks = await db.select({ postId: postBookmarks.postId }).from(postBookmarks).where(and(eq(postBookmarks.userId, viewerId), inArray(postBookmarks.postId, postIds)))
+    bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
+  }
+
+  const postsWithMedia = feedPosts.map((post) => ({
+    ...post,
+    media: allMedia.filter((m) => m.postId === post.id),
+    isLiked: likedPostIds.has(post.id),
+    isBookmarked: bookmarkedPostIds.has(post.id),
+  }))
+
+  return { posts: postsWithMedia, total: feedPosts.length }
+}
+
 export async function updatePost(postId: string, creatorId: string, input: UpdatePostInput) {
   const [post] = await db
     .update(posts)
@@ -198,6 +320,24 @@ export async function updatePost(postId: string, creatorId: string, input: Updat
 
   if (!post) throw new AppError('NOT_FOUND', 'Post nao encontrado', 404)
   return post
+}
+
+export async function togglePostVisibility(postId: string, creatorId: string) {
+  const [post] = await db
+    .select({ id: posts.id, isVisible: posts.isVisible })
+    .from(posts)
+    .where(and(eq(posts.id, postId), eq(posts.creatorId, creatorId)))
+    .limit(1)
+
+  if (!post) throw new AppError('NOT_FOUND', 'Post nao encontrado', 404)
+
+  const [updated] = await db
+    .update(posts)
+    .set({ isVisible: !post.isVisible, updatedAt: new Date() })
+    .where(eq(posts.id, postId))
+    .returning()
+
+  return updated
 }
 
 export async function deletePost(postId: string, creatorId: string) {

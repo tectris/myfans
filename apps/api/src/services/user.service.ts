@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { users, userSettings, creatorProfiles, userGamification, fancoinWallets } from '@myfans/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
+import { hashPassword, verifyPassword } from '../utils/password'
 import type { UpdateProfileInput, UpdateSettingsInput } from '@myfans/shared'
 
 export async function getProfile(userId: string) {
@@ -100,6 +101,23 @@ export async function updateSettings(userId: string, input: UpdateSettingsInput)
     .returning()
 
   return updated
+}
+
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const [user] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  if (!user) throw new AppError('NOT_FOUND', 'Usuario nao encontrado', 404)
+
+  const valid = await verifyPassword(currentPassword, user.passwordHash)
+  if (!valid) throw new AppError('INVALID_PASSWORD', 'Senha atual incorreta', 400)
+
+  const newHash = await hashPassword(newPassword)
+  await db.update(users).set({ passwordHash: newHash, updatedAt: new Date() }).where(eq(users.id, userId))
+  return { changed: true }
 }
 
 export async function getDashboardData(userId: string) {

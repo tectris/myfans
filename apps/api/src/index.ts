@@ -15,20 +15,30 @@ import gamification from './routes/gamification'
 import discovery from './routes/discovery'
 import feed from './routes/feed'
 import upload from './routes/upload'
+import media from './routes/media'
+import kyc from './routes/kyc'
+import admin from './routes/admin'
 
 const app = new Hono().basePath('/api/v1')
 
+const allowedOrigins = [
+  env.NEXT_PUBLIC_APP_URL,
+  'http://localhost:3000',
+  ...(env.CORS_ORIGINS ? env.CORS_ORIGINS.split(',').map((o) => o.trim()) : []),
+]
+  .map((o) => o.replace(/\/+$/, ''))
+  .filter(Boolean)
+
 app.use('*', logger())
 app.use('*', secureHeaders())
-const corsOrigins = [env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000']
-if (env.CORS_ORIGINS) {
-  corsOrigins.push(...env.CORS_ORIGINS.split(',').map((o) => o.trim()))
-}
 
 app.use(
   '*',
   cors({
-    origin: corsOrigins,
+    origin: (origin) => {
+      if (allowedOrigins.includes(origin)) return origin
+      return allowedOrigins[0]
+    },
     credentials: true,
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
@@ -45,6 +55,9 @@ app.route('/gamification', gamification)
 app.route('/discover', discovery)
 app.route('/feed', feed)
 app.route('/upload', upload)
+app.route('/media', media)
+app.route('/kyc', kyc)
+app.route('/admin', admin)
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 

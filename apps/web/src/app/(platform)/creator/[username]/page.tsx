@@ -1,7 +1,8 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/lib/store'
 import { Avatar } from '@/components/ui/avatar'
@@ -18,6 +19,7 @@ import { useState } from 'react'
 export default function CreatorProfilePage() {
   const { username } = useParams<{ username: string }>()
   const { user, isAuthenticated } = useAuthStore()
+  const queryClient = useQueryClient()
   const [subscribing, setSubscribing] = useState(false)
 
   const { data: profile } = useQuery({
@@ -35,6 +37,67 @@ export default function CreatorProfilePage() {
       return res.data
     },
     enabled: !!profile?.id && isAuthenticated && profile.id !== user?.id,
+  })
+
+  const { data: postsData } = useQuery({
+    queryKey: ['creator-posts', profile?.id],
+    queryFn: async () => {
+      const res = await api.get<{ posts: any[]; total: number }>(`/posts/creator/${profile.id}`)
+      return res.data
+    },
+    enabled: !!profile?.id,
+  })
+
+  const editMutation = useMutation({
+    mutationFn: ({ postId, data }: { postId: string; data: Record<string, unknown> }) =>
+      api.patch(`/posts/${postId}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['creator-posts'] })
+      toast.success('Post atualizado!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao editar'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (postId: string) => api.delete(`/posts/${postId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['creator-posts'] })
+      toast.success('Post excluido!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao excluir'),
+  })
+
+  const likeMutation = useMutation({
+    mutationFn: (postId: string) => api.post(`/posts/${postId}/like`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['creator-posts'] }),
+    onError: (e: any) => toast.error(e.message || 'Erro ao curtir'),
+  })
+
+  const bookmarkMutation = useMutation({
+    mutationFn: (postId: string) => api.post(`/posts/${postId}/bookmark`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['creator-posts'] }),
+    onError: (e: any) => toast.error(e.message || 'Erro ao salvar'),
+  })
+
+  const commentMutation = useMutation({
+    mutationFn: ({ postId, content }: { postId: string; content: string }) =>
+      api.post(`/posts/${postId}/comments`, { content }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['creator-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['comments', variables.postId] })
+      toast.success('Comentario adicionado!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao comentar'),
+  })
+
+  const tipMutation = useMutation({
+    mutationFn: ({ postId, creatorId, amount }: { postId: string; creatorId: string; amount: number }) =>
+      api.post('/fancoins/tip', { creatorId, amount, referenceId: postId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fancoin-wallet'] })
+      toast.success('Tip enviado com sucesso!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao enviar tip'),
   })
 
   async function handleSubscribe() {
@@ -90,7 +153,9 @@ export default function CreatorProfilePage() {
           </div>
           <div className="flex gap-2">
             {isOwner ? (
-              <Button variant="outline">Editar perfil</Button>
+              <Link href="/settings">
+                <Button variant="outline">Editar perfil</Button>
+              </Link>
             ) : isSubscribed ? (
               <Button variant="outline" disabled>
                 <Shield className="w-4 h-4 mr-1" /> Inscrito
@@ -161,13 +226,79 @@ export default function CreatorProfilePage() {
         </div>
       )}
 
-      {/* Posts placeholder */}
+      {/* Posts */}
       <div>
         <h2 className="font-bold text-lg mb-4">Posts</h2>
-        <div className="text-center py-12 text-muted">
-          <p>Os posts deste criador aparecerão aqui</p>
-        </div>
+        {postsData?.posts && postsData.posts.length > 0 ? (
+          <div>
+            {postsData.posts.map((post: any) => (
+              <CreatorPostCard
+                key={post.id}
+                post={post}
+                currentUserId={user?.id}
+                isAuthenticated={isAuthenticated}
+                onEdit={(postId, data) => editMutation.mutate({ postId, data })}
+                onDelete={(postId) => deleteMutation.mutate(postId)}
+                onLike={(postId) => likeMutation.mutate(postId)}
+                onBookmark={(postId) => bookmarkMutation.mutate(postId)}
+                onComment={(postId, content) => commentMutation.mutate({ postId, content })}
+                onTip={(postId, creatorId, amount) => tipMutation.mutate({ postId, creatorId, amount })}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-muted">
+            <p>{isOwner ? 'Voce ainda nao publicou nenhum post' : 'Nenhum post publico disponivel'}</p>
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+function CreatorPostCard({
+  post,
+  currentUserId,
+  isAuthenticated,
+  onEdit,
+  onDelete,
+  onLike,
+  onBookmark,
+  onComment,
+  onTip,
+}: {
+  post: any
+  currentUserId?: string | null
+  isAuthenticated: boolean
+  onEdit: (postId: string, data: Record<string, unknown>) => void
+  onDelete: (postId: string) => void
+  onLike: (postId: string) => void
+  onBookmark: (postId: string) => void
+  onComment: (postId: string, content: string) => void
+  onTip: (postId: string, creatorId: string, amount: number) => void
+}) {
+  const { data: commentsData } = useQuery({
+    queryKey: ['comments', post.id],
+    queryFn: async () => {
+      const res = await api.get<any>(`/posts/${post.id}/comments`)
+      return res.data
+    },
+  })
+
+  const comments = commentsData?.comments || commentsData || []
+
+  return (
+    <PostCard
+      post={post}
+      currentUserId={currentUserId}
+      isAuthenticated={isAuthenticated}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onLike={onLike}
+      onBookmark={onBookmark}
+      onComment={onComment}
+      onTip={onTip}
+      comments={Array.isArray(comments) ? comments : []}
+    />
   )
 }

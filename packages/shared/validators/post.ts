@@ -7,6 +7,14 @@ export const createPostSchema = z.object({
   tierId: z.string().uuid().optional(),
   ppvPrice: z.number().min(1).max(10000).optional(),
   scheduledAt: z.string().datetime().optional(),
+  media: z
+    .array(
+      z.object({
+        key: z.string(),
+        mediaType: z.string(),
+      }),
+    )
+    .optional(),
 })
 
 export const updatePostSchema = z.object({
@@ -14,6 +22,7 @@ export const updatePostSchema = z.object({
   visibility: z.enum(['public', 'subscribers', 'ppv']).optional(),
   isPinned: z.boolean().optional(),
   isArchived: z.boolean().optional(),
+  isVisible: z.boolean().optional(),
 })
 
 export const createCommentSchema = z.object({

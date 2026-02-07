@@ -37,7 +37,7 @@ export default function RegisterPage() {
       localStorage.setItem('refreshToken', res.data.refreshToken)
       setUser(res.data.user)
       toast.success('Conta criada com sucesso!')
-      router.push('/feed')
+      router.push('/kyc')
     } catch (e: any) {
       toast.error(e.message || 'Erro ao criar conta')
     } finally {
