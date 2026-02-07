@@ -4,7 +4,7 @@ import { success, error } from '../utils/response'
 import { AppError } from '../services/auth.service'
 import * as storage from '../services/storage.service'
 import * as media from '../services/media.service'
-import * as userService from '../services/user.service'
+import * as bunny from '../services/bunny.service'
 import * as postService from '../services/post.service'
 import { db } from '../config/database'
 import { users } from '@myfans/database'
@@ -156,8 +156,33 @@ uploadRoute.post('/post/:postId/media', authMiddleware, creatorMiddleware, async
       const thumbKey = storage.generateKey('thumbnails', userId, `${postId}-thumb.${thumb.format}`)
       const thumbResult = await storage.uploadFile(thumb.buffer, thumbKey, thumb.contentType)
       thumbnailUrl = thumbResult.url
+    } else if (bunny.isBunnyConfigured()) {
+      // Video: upload to Bunny Stream for HLS encoding
+      const video = await bunny.createVideo(`post-${postId}`)
+      await bunny.uploadVideo(video.guid, buffer)
+
+      // Save media record with Bunny GUID
+      const mediaRecord = await postService.addMediaToPost(postId, {
+        mediaType: 'video',
+        storageKey: video.guid,
+        thumbnailUrl: bunny.getThumbnailUrl(video.guid),
+        fileSize: file.size,
+        isPreview,
+        sortOrder,
+      })
+
+      return success(c, {
+        media: mediaRecord,
+        upload: {
+          videoId: video.guid,
+          status: 'uploaded',
+          message: 'Video enviado ao Bunny Stream. Encoding em andamento...',
+          thumbnailUrl: bunny.getThumbnailUrl(video.guid),
+          originalSize: file.size,
+        },
+      })
     } else {
-      // Video: upload raw (compression handled by Bunny Stream or client-side)
+      // Fallback: upload raw video to R2
       const ext = file.name?.split('.').pop() || 'mp4'
       const key = storage.generateKey('posts/videos', userId, `${postId}.${ext}`)
       uploadResult = await storage.uploadFile(buffer, key, file.type)

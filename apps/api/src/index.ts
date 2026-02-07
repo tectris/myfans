@@ -15,6 +15,7 @@ import gamification from './routes/gamification'
 import discovery from './routes/discovery'
 import feed from './routes/feed'
 import upload from './routes/upload'
+import video from './routes/video'
 import media from './routes/media'
 import kyc from './routes/kyc'
 import admin from './routes/admin'
@@ -62,6 +63,7 @@ app.route('/gamification', gamification)
 app.route('/discover', discovery)
 app.route('/feed', feed)
 app.route('/upload', upload)
+app.route('/video', video)
 app.route('/media', media)
 app.route('/kyc', kyc)
 app.route('/admin', admin)
