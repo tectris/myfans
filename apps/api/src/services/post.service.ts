@@ -5,15 +5,15 @@ import { AppError } from './auth.service'
 import type { CreatePostInput, UpdatePostInput } from '@myfans/shared'
 
 export async function createPost(creatorId: string, input: CreatePostInput) {
-  // Block media upload for users without KYC verification
+  // Block media upload for users without KYC verification (admins bypass)
   if (input.media && input.media.length > 0) {
     const [creator] = await db
-      .select({ kycStatus: users.kycStatus })
+      .select({ kycStatus: users.kycStatus, role: users.role })
       .from(users)
       .where(eq(users.id, creatorId))
       .limit(1)
 
-    if (!creator || creator.kycStatus !== 'approved') {
+    if (!creator || (creator.role !== 'admin' && creator.kycStatus !== 'approved')) {
       throw new AppError(
         'KYC_REQUIRED',
         'Verificacao de identidade necessaria para postar imagens e videos',
