@@ -62,7 +62,12 @@ function getClientIp(c: any): string {
  */
 export function rateLimit(config: RateLimitConfig) {
   return createMiddleware(async (c, next) => {
-    const limiter = await getLimiter(config)
+    let limiter: any
+    try {
+      limiter = await getLimiter(config)
+    } catch (err) {
+      console.error('Rate limit setup error:', err)
+    }
 
     // Graceful degradation: if Redis not configured, skip rate limiting
     if (!limiter) {

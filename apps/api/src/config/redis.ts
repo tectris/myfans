@@ -21,9 +21,14 @@ export async function getRedis(): Promise<any> {
   if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
     return null
   }
-  redis = new RedisClass({
-    url: env.UPSTASH_REDIS_REST_URL,
-    token: env.UPSTASH_REDIS_REST_TOKEN,
-  })
+  try {
+    redis = new RedisClass({
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  } catch (err) {
+    console.error('Failed to create Redis client:', err)
+    return null
+  }
   return redis
 }
