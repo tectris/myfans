@@ -22,13 +22,40 @@ import admin from './routes/admin'
 
 const app = new Hono().basePath('/api/v1')
 
-const allowedOrigins = [
-  env.NEXT_PUBLIC_APP_URL,
-  'http://localhost:3000',
-  ...(env.CORS_ORIGINS ? env.CORS_ORIGINS.split(',').map((o) => o.trim()) : []),
-]
-  .map((o) => o.replace(/\/+$/, ''))
-  .filter(Boolean)
+function normalizeOrigin(url: string): string {
+  const trimmed = url.trim().replace(/\/+$/, '')
+  if (!trimmed) return trimmed
+  if (/^https?:\/\//.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
+function buildAllowedOrigins(): string[] {
+  const raw = [
+    env.NEXT_PUBLIC_APP_URL,
+    'http://localhost:3000',
+    ...(env.CORS_ORIGINS ? env.CORS_ORIGINS.split(',').map((o) => o.trim()) : []),
+  ]
+    .map(normalizeOrigin)
+    .filter(Boolean)
+
+  // Auto-add www/non-www variants
+  const withVariants = new Set(raw)
+  for (const origin of raw) {
+    try {
+      const url = new URL(origin)
+      if (url.hostname.startsWith('www.')) {
+        withVariants.add(origin.replace('://www.', '://'))
+      } else {
+        withVariants.add(origin.replace('://', '://www.'))
+      }
+    } catch {}
+  }
+
+  return Array.from(withVariants)
+}
+
+const allowedOrigins = buildAllowedOrigins()
+console.log('CORS allowed origins:', allowedOrigins)
 
 app.use('*', logger())
 app.use('*', secureHeaders())
@@ -38,6 +65,7 @@ app.use(
   cors({
     origin: (origin) => {
       if (allowedOrigins.includes(origin)) return origin
+      console.warn(`CORS: origin "${origin}" not in allowed list`)
       return allowedOrigins[0]
     },
     credentials: true,

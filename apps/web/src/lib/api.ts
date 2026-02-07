@@ -1,5 +1,7 @@
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-const API_URL = rawApiUrl.replace(/\/api\/v1\/?$/, '')
+// Ensure protocol is present (handles case where env var is set to "api.myfans.my" without https://)
+const normalizedUrl = rawApiUrl.match(/^https?:\/\//) ? rawApiUrl : `https://${rawApiUrl}`
+const API_URL = normalizedUrl.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '')
 
 type ApiResponse<T> = {
   success: boolean
@@ -37,10 +39,15 @@ class ApiClient {
 
     if (token) headers['Authorization'] = `Bearer ${token}`
 
-    const res = await fetch(`${API_URL}/api/v1${path}`, {
-      ...options,
-      headers,
-    })
+    let res: Response
+    try {
+      res = await fetch(`${API_URL}/api/v1${path}`, {
+        ...options,
+        headers,
+      })
+    } catch {
+      throw new ApiError('NETWORK_ERROR', 'Servidor indisponivel. Verifique se a API esta rodando.', 0)
+    }
 
     const json = await res.json()
 

@@ -28,24 +28,61 @@ export async function register(input: RegisterInput) {
 
   const passwordHash = await hashPassword(input.password)
 
-  const [user] = await db
-    .insert(users)
-    .values({
-      email: input.email,
-      username: input.username,
-      displayName: input.displayName || input.username,
-      passwordHash,
-      dateOfBirth: input.dateOfBirth,
-    })
-    .returning({
-      id: users.id,
-      email: users.email,
-      username: users.username,
-      displayName: users.displayName,
-      avatarUrl: users.avatarUrl,
-      role: users.role,
-      kycStatus: users.kycStatus,
-    })
+  let user: {
+    id: string
+    email: string
+    username: string
+    displayName: string | null
+    avatarUrl: string | null
+    role: string
+    kycStatus: string
+  }
+
+  try {
+    const [result] = await db
+      .insert(users)
+      .values({
+        email: input.email,
+        username: input.username,
+        displayName: input.displayName || input.username,
+        passwordHash,
+        dateOfBirth: input.dateOfBirth,
+      })
+      .returning({
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        role: users.role,
+        kycStatus: users.kycStatus,
+      })
+    user = result!
+  } catch (dbErr: any) {
+    // Fallback if kyc_status column doesn't exist yet (migration not run)
+    if (dbErr?.message?.includes('kyc_status')) {
+      const [result] = await db
+        .insert(users)
+        .values({
+          email: input.email,
+          username: input.username,
+          displayName: input.displayName || input.username,
+          passwordHash,
+          dateOfBirth: input.dateOfBirth,
+        })
+        .returning({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+          role: users.role,
+        })
+      user = { ...result!, kycStatus: 'none' }
+    } else {
+      throw dbErr
+    }
+  }
 
   if (!user) throw new AppError('INTERNAL', 'Erro ao criar usuario', 500)
 
@@ -62,11 +99,36 @@ export async function register(input: RegisterInput) {
 }
 
 export async function login(input: LoginInput) {
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, input.email))
-    .limit(1)
+  let user: any
+
+  try {
+    const [result] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, input.email))
+      .limit(1)
+    user = result
+  } catch (dbErr: any) {
+    if (dbErr?.message?.includes('kyc_status')) {
+      const [result] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          displayName: users.displayName,
+          passwordHash: users.passwordHash,
+          avatarUrl: users.avatarUrl,
+          role: users.role,
+          isActive: users.isActive,
+        })
+        .from(users)
+        .where(eq(users.email, input.email))
+        .limit(1)
+      user = result ? { ...result, kycStatus: 'none' } : null
+    } else {
+      throw dbErr
+    }
+  }
 
   if (!user) {
     throw new AppError('INVALID_CREDENTIALS', 'Email ou senha incorretos', 401)
@@ -94,7 +156,7 @@ export async function login(input: LoginInput) {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       role: user.role,
-      kycStatus: user.kycStatus,
+      kycStatus: user.kycStatus ?? 'none',
     },
     accessToken,
     refreshToken,
@@ -102,19 +164,42 @@ export async function login(input: LoginInput) {
 }
 
 export async function getMe(userId: string) {
-  const [user] = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      username: users.username,
-      displayName: users.displayName,
-      avatarUrl: users.avatarUrl,
-      role: users.role,
-      kycStatus: users.kycStatus,
-    })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
+  let user: any
+
+  try {
+    const [result] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        role: users.role,
+        kycStatus: users.kycStatus,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    user = result
+  } catch (dbErr: any) {
+    if (dbErr?.message?.includes('kyc_status')) {
+      const [result] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1)
+      user = result ? { ...result, kycStatus: 'none' } : null
+    } else {
+      throw dbErr
+    }
+  }
 
   if (!user) throw new AppError('NOT_FOUND', 'Usuario nao encontrado', 404)
   return user
