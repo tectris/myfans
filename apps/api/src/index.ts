@@ -97,7 +97,7 @@ app.route('/admin', admin)
 app.route('/payments', paymentsRoute)
 app.route('/notifications', notificationsRoute)
 
-app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
+app.get('/health', (c) => c.json({ status: 'ok', version: '2.1.0', timestamp: new Date().toISOString() }))
 
 app.onError((err, c) => {
   console.error('Unhandled error:', err)
