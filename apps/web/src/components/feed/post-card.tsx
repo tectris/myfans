@@ -52,6 +52,7 @@ interface PostCardProps {
     hasAccess?: boolean
     isLiked?: boolean
     isBookmarked?: boolean
+    tipSent?: { amount: number; createdAt: string } | null
   }
   currentUserId?: string | null
   isAuthenticated?: boolean
@@ -375,6 +376,20 @@ export function PostCard({
           <Bookmark className={`w-5 h-5 ${bookmarked ? 'fill-primary text-primary' : ''}`} />
         </button>
       </div>
+
+      {/* Tip sent log */}
+      {post.tipSent && !isOwner && (
+        <div className="px-4 pb-2">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-sm bg-secondary/10 border border-secondary/20 text-xs">
+            <Coins className="w-3.5 h-3.5 text-secondary shrink-0" />
+            <span className="text-secondary">
+              Voce enviou {post.tipSent.amount} FanCoins em{' '}
+              {new Date(post.tipSent.createdAt).toLocaleDateString('pt-BR')} -{' '}
+              {new Date(post.tipSent.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Tip input */}
       {showTip && !isOwner && (

@@ -52,7 +52,18 @@ export function Header() {
     enabled: isAuthenticated,
   })
 
+  const { data: unreadData } = useQuery({
+    queryKey: ['unread-count'],
+    queryFn: async () => {
+      const res = await api.get<{ count: number }>('/notifications/unread-count')
+      return res.data
+    },
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  })
+
   const balance = walletData?.data ? Number(walletData.data.balance) : 0
+  const unreadCount = unreadData?.count || 0
 
   return (
     <>
@@ -134,6 +145,11 @@ export function Header() {
                   className="p-2 rounded-full hover:bg-surface-light transition-colors relative"
                 >
                   <Bell className="w-5 h-5 text-muted" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold bg-error text-white rounded-full">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
                 <Link href={`/creator/${user?.username}`}>
                   <Avatar src={user?.avatarUrl} alt={user?.displayName || user?.username || ''} size="sm" />

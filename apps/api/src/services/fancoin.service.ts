@@ -1,5 +1,5 @@
 import { eq, sql } from 'drizzle-orm'
-import { fancoinWallets, fancoinTransactions, creatorProfiles } from '@myfans/database'
+import { fancoinWallets, fancoinTransactions, creatorProfiles, users } from '@myfans/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
 import { FANCOIN_PACKAGES, PLATFORM_FEES } from '@myfans/shared'
@@ -66,6 +66,18 @@ export async function purchaseFancoins(userId: string, packageId: string) {
 export async function sendTip(fromUserId: string, toCreatorId: string, amount: number, referenceId?: string) {
   if (amount <= 0) throw new AppError('INVALID', 'Valor invalido', 400)
 
+  // Look up both usernames for descriptions
+  const [sender] = await db
+    .select({ username: users.username })
+    .from(users)
+    .where(eq(users.id, fromUserId))
+    .limit(1)
+  const [receiver] = await db
+    .select({ username: users.username })
+    .from(users)
+    .where(eq(users.id, toCreatorId))
+    .limit(1)
+
   const wallet = await getWallet(fromUserId)
   if (wallet.balance < amount) {
     throw new AppError('INSUFFICIENT_BALANCE', 'Saldo insuficiente de FanCoins', 400)
@@ -97,6 +109,9 @@ export async function sendTip(fromUserId: string, toCreatorId: string, amount: n
     })
     .where(eq(fancoinWallets.userId, toCreatorId))
 
+  const senderUsername = sender?.username || 'usuario'
+  const receiverUsername = receiver?.username || 'usuario'
+
   await db.insert(fancoinTransactions).values([
     {
       userId: fromUserId,
@@ -104,7 +119,7 @@ export async function sendTip(fromUserId: string, toCreatorId: string, amount: n
       amount: -amount,
       balanceAfter: newSenderBalance,
       referenceId,
-      description: `Tip enviado`,
+      description: `Tip enviado para @${receiverUsername}`,
     },
     {
       userId: toCreatorId,
@@ -112,7 +127,7 @@ export async function sendTip(fromUserId: string, toCreatorId: string, amount: n
       amount: creatorAmount,
       balanceAfter: newCreatorBalance,
       referenceId,
-      description: `Tip recebido`,
+      description: `Tip recebido de @${senderUsername}`,
     },
   ])
 

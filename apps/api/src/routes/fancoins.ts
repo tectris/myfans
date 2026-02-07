@@ -5,6 +5,10 @@ import { validateBody } from '../middleware/validation'
 import { authMiddleware } from '../middleware/auth'
 import * as fancoinService from '../services/fancoin.service'
 import * as gamificationService from '../services/gamification.service'
+import * as notificationService from '../services/notification.service'
+import { db } from '../config/database'
+import { users } from '@myfans/database'
+import { eq } from 'drizzle-orm'
 import { success, error } from '../utils/response'
 import { AppError } from '../services/auth.service'
 
@@ -51,6 +55,22 @@ fancoins.post('/tip', authMiddleware, validateBody(tipSchema), async (c) => {
     const body = c.req.valid('json')
     const result = await fancoinService.sendTip(userId, body.creatorId, body.amount, body.referenceId)
     await gamificationService.addXp(userId, 'tip_sent')
+
+    // Send notification to the creator
+    const [sender] = await db
+      .select({ username: users.username, displayName: users.displayName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    const senderName = sender?.displayName || sender?.username || 'Alguem'
+    await notificationService.createNotification(
+      body.creatorId,
+      'tip_received',
+      `${senderName} enviou ${body.amount} FanCoins!`,
+      `@${sender?.username} enviou um tip de ${body.amount} FanCoins para voce.`,
+      { fromUserId: userId, amount: body.amount, referenceId: body.referenceId },
+    )
+
     return success(c, result)
   } catch (e) {
     if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)

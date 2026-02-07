@@ -1,5 +1,5 @@
 import { eq, desc, and, or, sql, inArray } from 'drizzle-orm'
-import { posts, postMedia, postLikes, postComments, postBookmarks, subscriptions, users, creatorProfiles } from '@myfans/database'
+import { posts, postMedia, postLikes, postComments, postBookmarks, subscriptions, users, creatorProfiles, fancoinTransactions } from '@myfans/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
 import type { CreatePostInput, UpdatePostInput } from '@myfans/shared'
@@ -204,11 +204,34 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
       : []
   const bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
 
+  // Get user's tip_sent transactions for these posts
+  const userTips =
+    postIds.length > 0
+      ? await db
+          .select({
+            referenceId: fancoinTransactions.referenceId,
+            amount: fancoinTransactions.amount,
+            createdAt: fancoinTransactions.createdAt,
+          })
+          .from(fancoinTransactions)
+          .where(
+            and(
+              eq(fancoinTransactions.userId, userId),
+              eq(fancoinTransactions.type, 'tip_sent'),
+              inArray(fancoinTransactions.referenceId, postIds),
+            ),
+          )
+      : []
+  const tipsByPostId = new Map(
+    userTips.map((t) => [t.referenceId, { amount: Math.abs(t.amount), createdAt: t.createdAt }]),
+  )
+
   const postsWithMedia = feedPosts.map((post) => ({
     ...post,
     media: allMedia.filter((m) => m.postId === post.id),
     isLiked: likedPostIds.has(post.id),
     isBookmarked: bookmarkedPostIds.has(post.id),
+    tipSent: tipsByPostId.get(post.id) || null,
   }))
 
   return { posts: postsWithMedia, total: feedPosts.length }
