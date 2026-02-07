@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -31,7 +32,7 @@ type CheckoutResponse = {
   package: { id: string; coins: number; bonus: number; price: number; label: string }
 }
 
-export default function WalletPage() {
+function WalletContent() {
   const queryClient = useQueryClient()
   const searchParams = useSearchParams()
   const paymentStatus = searchParams.get('payment')
@@ -252,5 +253,13 @@ export default function WalletPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function WalletPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+      <WalletContent />
+    </Suspense>
   )
 }
