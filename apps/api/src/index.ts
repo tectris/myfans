@@ -4,6 +4,7 @@ import { logger } from 'hono/logger'
 import { secureHeaders } from 'hono/secure-headers'
 import { serve } from '@hono/node-server'
 import { env } from './config/env'
+import { apiRateLimit } from './middleware/rateLimit'
 
 import auth from './routes/auth'
 import usersRoute from './routes/users'
@@ -70,6 +71,9 @@ app.use(
     allowHeaders: ['Content-Type', 'Authorization'],
   }),
 )
+
+// Global rate limit (100 req/min per IP, graceful if Redis unavailable)
+app.use('*', apiRateLimit)
 
 app.route('/auth', auth)
 app.route('/users', usersRoute)

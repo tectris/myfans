@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { randomUUID } from 'crypto'
 import { authMiddleware } from '../middleware/auth'
+import { uploadRateLimit } from '../middleware/rateLimit'
 import { success, error } from '../utils/response'
 
 // In-memory media store (for testing - files lost on restart)
@@ -8,7 +9,7 @@ const mediaStore = new Map<string, { buffer: Buffer; contentType: string }>()
 
 const media = new Hono()
 
-media.post('/upload', authMiddleware, async (c) => {
+media.post('/upload', authMiddleware, uploadRateLimit, async (c) => {
   const body = await c.req.parseBody()
   const file = body['file']
 

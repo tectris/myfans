@@ -4,10 +4,11 @@ import { validateBody } from '../middleware/validation'
 import * as authService from '../services/auth.service'
 import { success, error } from '../utils/response'
 import { authMiddleware } from '../middleware/auth'
+import { authRateLimit } from '../middleware/rateLimit'
 
 const auth = new Hono()
 
-auth.post('/register', validateBody(registerSchema), async (c) => {
+auth.post('/register', authRateLimit, validateBody(registerSchema), async (c) => {
   try {
     const body = c.req.valid('json')
     const result = await authService.register(body)
@@ -20,7 +21,7 @@ auth.post('/register', validateBody(registerSchema), async (c) => {
   }
 })
 
-auth.post('/login', validateBody(loginSchema), async (c) => {
+auth.post('/login', authRateLimit, validateBody(loginSchema), async (c) => {
   try {
     const body = c.req.valid('json')
     const result = await authService.login(body)
