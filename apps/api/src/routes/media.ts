@@ -56,7 +56,7 @@ media.post('/upload', authMiddleware, async (c) => {
     await bunny.uploadVideo(video.guid, buffer)
 
     return success(c, {
-      key: video.guid,
+      key: bunny.getPlayUrl(video.guid),
       mediaType,
       fileSize: file.size,
       videoId: video.guid,
