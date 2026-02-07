@@ -146,9 +146,20 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
     creatorIds.push(userId)
   }
 
-  if (creatorIds.length === 0) {
-    return { posts: [], total: 0 }
-  }
+  // Build feed conditions: own posts + subscribed creators' posts + public posts from everyone
+  const feedConditions = and(
+    eq(posts.isArchived, false),
+    or(
+      // Own posts (visible or hidden)
+      eq(posts.creatorId, userId),
+      // Subscribed creators' posts
+      ...(creatorIds.length > 0
+        ? [and(inArray(posts.creatorId, creatorIds), eq(posts.isVisible, true))]
+        : []),
+      // Public posts from all creators (so new users see content)
+      and(eq(posts.visibility, 'public'), eq(posts.isVisible, true)),
+    ),
+  )
 
   const feedPosts = await db
     .select({
@@ -170,13 +181,7 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
     })
     .from(posts)
     .innerJoin(users, eq(posts.creatorId, users.id))
-    .where(
-      and(
-        inArray(posts.creatorId, creatorIds),
-        eq(posts.isArchived, false),
-        or(eq(posts.isVisible, true), eq(posts.creatorId, userId)),
-      ),
-    )
+    .where(feedConditions)
     .orderBy(desc(posts.publishedAt))
     .limit(limit)
     .offset(offset)

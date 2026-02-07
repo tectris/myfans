@@ -12,15 +12,17 @@ import { Card, CardContent } from '@/components/ui/card'
 import { PostCard } from '@/components/feed/post-card'
 import { LevelBadge } from '@/components/gamification/level-badge'
 import { formatCurrency, formatNumber } from '@/lib/utils'
-import { Users, MapPin, Calendar, Shield, Crown, Star } from 'lucide-react'
+import { Users, MapPin, Calendar, Shield, Crown, Star, Camera, ImagePlus } from 'lucide-react'
 import { toast } from 'sonner'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 export default function CreatorProfilePage() {
   const { username } = useParams<{ username: string }>()
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, setUser } = useAuthStore()
   const queryClient = useQueryClient()
   const [subscribing, setSubscribing] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
 
   const { data: profile } = useQuery({
     queryKey: ['profile', username],
@@ -100,6 +102,55 @@ export default function CreatorProfilePage() {
     onError: (e: any) => toast.error(e.message || 'Erro ao enviar tip'),
   })
 
+  const avatarMutation = useMutation({
+    mutationFn: (file: File) => api.upload<{ url: string }>('/upload/avatar', file),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['profile', username] })
+      if (user && res.data?.url) {
+        setUser({ ...user, avatarUrl: res.data.url })
+      }
+      toast.success('Foto de perfil atualizada!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao enviar imagem'),
+  })
+
+  const coverMutation = useMutation({
+    mutationFn: (file: File) => api.upload<{ url: string }>('/upload/cover', file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', username] })
+      toast.success('Imagem de capa atualizada!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao enviar imagem'),
+  })
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Apenas imagens sao aceitas')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem deve ter no maximo 5MB')
+      return
+    }
+    avatarMutation.mutate(file)
+  }
+
+  function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Apenas imagens sao aceitas')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Imagem deve ter no maximo 10MB')
+      return
+    }
+    coverMutation.mutate(file)
+  }
+
   async function handleSubscribe() {
     if (!isAuthenticated) {
       window.location.href = '/login'
@@ -132,21 +183,60 @@ export default function CreatorProfilePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
       {/* Cover */}
-      <div className="h-48 md:h-56 rounded-md overflow-hidden bg-gradient-to-br from-primary/30 to-secondary/30 relative">
+      <div
+        className={`h-48 md:h-56 rounded-md overflow-hidden bg-gradient-to-br from-primary/30 to-secondary/30 relative ${isOwner ? 'group cursor-pointer' : ''}`}
+        onClick={() => isOwner && coverInputRef.current?.click()}
+      >
         {profile.coverUrl && (
           <img src={profile.coverUrl} alt="" className="w-full h-full object-cover" />
+        )}
+        {isOwner && (
+          <>
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <div className="text-white text-sm flex items-center gap-2">
+                <ImagePlus className="w-5 h-5" />
+                {coverMutation.isPending ? 'Enviando...' : 'Alterar capa'}
+              </div>
+            </div>
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleCoverChange}
+              className="hidden"
+            />
+          </>
         )}
       </div>
 
       {/* Profile info */}
       <div className="relative px-4 -mt-12 mb-6">
         <div className="flex flex-col md:flex-row md:items-end gap-4">
-          <Avatar
-            src={profile.avatarUrl}
-            alt={profile.displayName || profile.username}
-            size="xl"
-            verified={profile.creator?.isVerified}
-          />
+          <div
+            className={`relative shrink-0 ${isOwner ? 'group cursor-pointer' : ''}`}
+            onClick={() => isOwner && avatarInputRef.current?.click()}
+          >
+            <Avatar
+              src={profile.avatarUrl}
+              alt={profile.displayName || profile.username}
+              size="xl"
+              verified={profile.creator?.isVerified}
+            />
+            {isOwner && (
+              <>
+                <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </>
+            )}
+          </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{profile.displayName || profile.username}</h1>
             <p className="text-muted">@{profile.username}</p>

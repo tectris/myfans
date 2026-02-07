@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,13 +13,15 @@ import { Input } from '@/components/ui/input'
 import { Avatar } from '@/components/ui/avatar'
 import { StreakCounter } from '@/components/gamification/streak-counter'
 import { LevelBadge } from '@/components/gamification/level-badge'
-import { Settings, User, LogOut, KeyRound, Shield, CheckCircle2, Clock, XCircle, ArrowRight } from 'lucide-react'
+import { Settings, User, LogOut, KeyRound, Shield, CheckCircle2, Clock, XCircle, ArrowRight, Camera, ImagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
 export default function SettingsPage() {
-  const { user, logout } = useAuthStore()
+  const { user, logout, setUser } = useAuthStore()
   const queryClient = useQueryClient()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
 
   const { data: profile } = useQuery({
     queryKey: ['my-profile'],
@@ -64,6 +66,55 @@ export default function SettingsPage() {
     onError: (e: any) => toast.error(e.message),
   })
 
+  const avatarMutation = useMutation({
+    mutationFn: (file: File) => api.upload<{ url: string }>('/upload/avatar', file),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['my-profile'] })
+      if (user && res.data?.url) {
+        setUser({ ...user, avatarUrl: res.data.url })
+      }
+      toast.success('Foto de perfil atualizada!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao enviar imagem'),
+  })
+
+  const coverMutation = useMutation({
+    mutationFn: (file: File) => api.upload<{ url: string }>('/upload/cover', file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-profile'] })
+      toast.success('Imagem de capa atualizada!')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao enviar imagem'),
+  })
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Apenas imagens sao aceitas')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem deve ter no maximo 5MB')
+      return
+    }
+    avatarMutation.mutate(file)
+  }
+
+  function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Apenas imagens sao aceitas')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Imagem deve ter no maximo 10MB')
+      return
+    }
+    coverMutation.mutate(file)
+  }
+
   function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault()
     if (newPassword !== confirmPassword) {
@@ -90,17 +141,58 @@ export default function SettingsPage() {
         <h1 className="text-xl font-bold">Configuracoes</h1>
       </div>
 
-      {/* Profile card */}
+      {/* Profile card with image uploads */}
       {profile && (
-        <Card className="mb-6">
+        <Card className="mb-6 overflow-hidden">
+          {/* Cover image */}
+          <div
+            className="h-32 bg-gradient-to-br from-primary/30 to-secondary/30 relative group cursor-pointer"
+            onClick={() => coverInputRef.current?.click()}
+          >
+            {profile.coverUrl && (
+              <img src={profile.coverUrl} alt="" className="w-full h-full object-cover" />
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <div className="text-white text-sm flex items-center gap-2">
+                <ImagePlus className="w-5 h-5" />
+                {coverMutation.isPending ? 'Enviando...' : 'Alterar capa'}
+              </div>
+            </div>
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleCoverChange}
+              className="hidden"
+            />
+          </div>
           <CardContent className="py-6">
-            <div className="flex items-center gap-4 mb-4">
-              <Avatar src={profile.avatarUrl} alt={profile.displayName || profile.username} size="xl" />
-              <div>
+            <div className="flex items-center gap-4 mb-4 -mt-12">
+              {/* Avatar with upload */}
+              <div
+                className="relative group cursor-pointer shrink-0"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                <Avatar src={profile.avatarUrl} alt={profile.displayName || profile.username} size="xl" />
+                <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </div>
+              <div className="pt-8">
                 <h2 className="text-lg font-bold">{profile.displayName || profile.username}</h2>
                 <p className="text-sm text-muted">@{profile.username}</p>
               </div>
             </div>
+            {(avatarMutation.isPending || coverMutation.isPending) && (
+              <p className="text-xs text-muted mb-2">Enviando imagem...</p>
+            )}
             {profile.gamification && (
               <div className="flex items-center gap-6">
                 <LevelBadge

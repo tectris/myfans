@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/lib/store'
@@ -10,9 +10,41 @@ import { Button } from '@/components/ui/button'
 import { FancoinDrawer } from '@/components/fancoins/fancoin-drawer'
 import { Search, Bell, MessageCircle, Flame, Coins } from 'lucide-react'
 
+function useDebounce(value: string, delay: number) {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(t)
+  }, [value, delay])
+  return debounced
+}
+
 export function Header() {
   const { user, isAuthenticated } = useAuthStore()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
+  const debouncedQuery = useDebounce(searchQuery, 300)
+
+  const { data: searchResults } = useQuery({
+    queryKey: ['header-search', debouncedQuery],
+    queryFn: async () => {
+      const res = await api.get<any[]>(`/discover/search/users?q=${encodeURIComponent(debouncedQuery)}`)
+      return res.data
+    },
+    enabled: debouncedQuery.length >= 2,
+  })
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const { data: walletData } = useQuery({
     queryKey: ['fancoin-wallet'],
@@ -35,14 +67,47 @@ export function Header() {
             </Link>
           </div>
 
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
+          <div className="hidden md:flex flex-1 max-w-md mx-8" ref={searchRef}>
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setSearchOpen(true)
+                }}
+                onFocus={() => searchQuery.length >= 2 && setSearchOpen(true)}
                 placeholder="Buscar criadores..."
                 className="w-full pl-10 pr-4 py-2 rounded-full bg-surface-light border border-border text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
               />
+              {searchOpen && debouncedQuery.length >= 2 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-md shadow-xl max-h-80 overflow-y-auto z-50">
+                  {searchResults && searchResults.length > 0 ? (
+                    searchResults.map((u: any) => (
+                      <Link
+                        key={u.id}
+                        href={`/creator/${u.username}`}
+                        onClick={() => {
+                          setSearchOpen(false)
+                          setSearchQuery('')
+                        }}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-surface-light transition-colors"
+                      >
+                        <Avatar src={u.avatarUrl} alt={u.displayName || u.username} size="sm" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{u.displayName || u.username}</p>
+                          <p className="text-xs text-muted">@{u.username}</p>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="px-4 py-6 text-center text-sm text-muted">
+                      Nenhum usuario encontrado
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

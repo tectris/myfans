@@ -25,6 +25,13 @@ discovery.get('/search', async (c) => {
   return success(c, results)
 })
 
+discovery.get('/search/users', async (c) => {
+  const q = c.req.query('q')
+  if (!q || q.length < 2) return success(c, [])
+  const results = await discoveryService.searchUsers(q)
+  return success(c, results)
+})
+
 discovery.get('/categories', async (c) => {
   const categories = await discoveryService.getCategories()
   return success(c, categories)

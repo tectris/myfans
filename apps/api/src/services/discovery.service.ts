@@ -85,6 +85,30 @@ export async function searchCreators(query: string, limit = 20) {
   return results
 }
 
+export async function searchUsers(query: string, limit = 20) {
+  const searchTerm = `%${query}%`
+
+  const results = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      avatarUrl: users.avatarUrl,
+      bio: users.bio,
+      role: users.role,
+    })
+    .from(users)
+    .where(
+      and(
+        eq(users.isActive, true),
+        or(ilike(users.username, searchTerm), ilike(users.displayName, searchTerm)),
+      ),
+    )
+    .limit(limit)
+
+  return results
+}
+
 export async function getCategories() {
   const result = await db
     .select({
