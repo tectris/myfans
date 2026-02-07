@@ -222,9 +222,19 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
             ),
           )
       : []
-  const tipsByPostId = new Map(
-    userTips.map((t) => [t.referenceId, { amount: Math.abs(t.amount), createdAt: t.createdAt }]),
-  )
+  const tipsByPostId = new Map<string, { amount: number; createdAt: Date | string }>()
+  for (const t of userTips) {
+    if (!t.referenceId) continue
+    const existing = tipsByPostId.get(t.referenceId)
+    if (existing) {
+      existing.amount += Math.abs(Number(t.amount))
+      if (new Date(t.createdAt) > new Date(existing.createdAt)) {
+        existing.createdAt = t.createdAt
+      }
+    } else {
+      tipsByPostId.set(t.referenceId, { amount: Math.abs(Number(t.amount)), createdAt: t.createdAt })
+    }
+  }
 
   const postsWithMedia = feedPosts.map((post) => ({
     ...post,
@@ -329,11 +339,43 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
     bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
   }
 
+  // Get viewer's tip_sent transactions for these posts
+  const tipsByPostId = new Map<string, { amount: number; createdAt: Date | string }>()
+  if (viewerId && postIds.length > 0) {
+    const userTips = await db
+      .select({
+        referenceId: fancoinTransactions.referenceId,
+        amount: fancoinTransactions.amount,
+        createdAt: fancoinTransactions.createdAt,
+      })
+      .from(fancoinTransactions)
+      .where(
+        and(
+          eq(fancoinTransactions.userId, viewerId),
+          eq(fancoinTransactions.type, 'tip_sent'),
+          inArray(fancoinTransactions.referenceId, postIds),
+        ),
+      )
+    for (const t of userTips) {
+      if (!t.referenceId) continue
+      const existing = tipsByPostId.get(t.referenceId)
+      if (existing) {
+        existing.amount += Math.abs(Number(t.amount))
+        if (new Date(t.createdAt) > new Date(existing.createdAt)) {
+          existing.createdAt = t.createdAt
+        }
+      } else {
+        tipsByPostId.set(t.referenceId, { amount: Math.abs(Number(t.amount)), createdAt: t.createdAt })
+      }
+    }
+  }
+
   const postsWithMedia = feedPosts.map((post) => ({
     ...post,
     media: allMedia.filter((m) => m.postId === post.id),
     isLiked: likedPostIds.has(post.id),
     isBookmarked: bookmarkedPostIds.has(post.id),
+    tipSent: tipsByPostId.get(post.id) || null,
   }))
 
   return { posts: postsWithMedia, total: feedPosts.length }

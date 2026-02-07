@@ -56,20 +56,24 @@ fancoins.post('/tip', authMiddleware, validateBody(tipSchema), async (c) => {
     const result = await fancoinService.sendTip(userId, body.creatorId, body.amount, body.referenceId)
     await gamificationService.addXp(userId, 'tip_sent')
 
-    // Send notification to the creator
-    const [sender] = await db
-      .select({ username: users.username, displayName: users.displayName })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
-    const senderName = sender?.displayName || sender?.username || 'Alguem'
-    await notificationService.createNotification(
-      body.creatorId,
-      'tip_received',
-      `${senderName} enviou ${body.amount} FanCoins!`,
-      `@${sender?.username} enviou um tip de ${body.amount} FanCoins para voce.`,
-      { fromUserId: userId, amount: body.amount, referenceId: body.referenceId },
-    )
+    // Send notification to the creator (non-blocking — tip already succeeded)
+    try {
+      const [sender] = await db
+        .select({ username: users.username, displayName: users.displayName })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1)
+      const senderName = sender?.displayName || sender?.username || 'Alguem'
+      await notificationService.createNotification(
+        body.creatorId,
+        'tip_received',
+        `${senderName} enviou ${body.amount} FanCoins!`,
+        `@${sender?.username} enviou um tip de ${body.amount} FanCoins para voce.`,
+        { fromUserId: userId, amount: body.amount, referenceId: body.referenceId },
+      )
+    } catch (notifErr) {
+      console.error('Failed to create tip notification:', notifErr)
+    }
 
     return success(c, result)
   } catch (e) {
