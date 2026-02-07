@@ -27,7 +27,7 @@ export function Header() {
       <header className="sticky top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+            <Link href={isAuthenticated ? '/feed' : '/'} className="flex items-center gap-2 font-bold text-xl">
               <Flame className="w-7 h-7 text-primary" />
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 MyFans

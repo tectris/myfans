@@ -50,6 +50,7 @@ interface PostCardProps {
     isBookmarked?: boolean
   }
   currentUserId?: string | null
+  isAuthenticated?: boolean
   onLike?: (postId: string) => void
   onBookmark?: (postId: string) => void
   onEdit?: (postId: string, data: { contentText?: string; isPinned?: boolean }) => void
@@ -69,6 +70,7 @@ interface PostCardProps {
 export function PostCard({
   post,
   currentUserId,
+  isAuthenticated = true,
   onLike,
   onBookmark,
   onEdit,
@@ -93,12 +95,20 @@ export function PostCard({
   const [bookmarked, setBookmarked] = useState(post.isBookmarked || false)
 
   function handleLike() {
+    if (!isAuthenticated) {
+      window.location.href = '/login'
+      return
+    }
     setLiked(!liked)
     setLikeCount((c) => (liked ? c - 1 : c + 1))
     onLike?.(post.id)
   }
 
   function handleBookmark() {
+    if (!isAuthenticated) {
+      window.location.href = '/login'
+      return
+    }
     setBookmarked(!bookmarked)
     onBookmark?.(post.id)
   }
@@ -121,17 +131,43 @@ export function PostCard({
   }
 
   function handleComment() {
+    if (!isAuthenticated) {
+      window.location.href = '/login'
+      return
+    }
     if (!commentText.trim()) return
     onComment?.(post.id, commentText.trim())
     setCommentText('')
   }
 
   function handleTip() {
+    if (!isAuthenticated) {
+      window.location.href = '/login'
+      return
+    }
     const amount = Number(tipAmount)
     if (!amount || amount <= 0) return
     onTip?.(post.id, post.creatorId || '', amount)
     setTipAmount('')
     setShowTip(false)
+  }
+
+  function toggleComments() {
+    if (!isAuthenticated) {
+      window.location.href = '/login'
+      return
+    }
+    setShowComments(!showComments)
+    if (!showComments) setShowTip(false)
+  }
+
+  function toggleTip() {
+    if (!isAuthenticated) {
+      window.location.href = '/login'
+      return
+    }
+    setShowTip(!showTip)
+    if (!showTip) setShowComments(false)
   }
 
   return (
@@ -288,20 +324,22 @@ export function PostCard({
         </button>
 
         <button
-          onClick={() => setShowComments(!showComments)}
+          onClick={toggleComments}
           className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors"
         >
           <MessageCircle className={`w-5 h-5 ${showComments ? 'text-primary' : ''}`} />
           <span>{formatNumber(post.commentCount)}</span>
         </button>
 
-        <button
-          onClick={() => setShowTip(!showTip)}
-          className="flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors"
-        >
-          <Coins className={`w-5 h-5 ${showTip ? 'text-secondary' : ''}`} />
-          <span>Tip</span>
-        </button>
+        {!isOwner && (
+          <button
+            onClick={toggleTip}
+            className="flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors"
+          >
+            <Coins className={`w-5 h-5 ${showTip ? 'text-secondary' : ''}`} />
+            <span>Tip</span>
+          </button>
+        )}
 
         <div className="flex-1" />
 

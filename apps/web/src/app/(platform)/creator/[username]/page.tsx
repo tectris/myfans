@@ -69,11 +69,13 @@ export default function CreatorProfilePage() {
 
   const likeMutation = useMutation({
     mutationFn: (postId: string) => api.post(`/posts/${postId}/like`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['creator-posts'] }),
     onError: (e: any) => toast.error(e.message || 'Erro ao curtir'),
   })
 
   const bookmarkMutation = useMutation({
     mutationFn: (postId: string) => api.post(`/posts/${postId}/bookmark`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['creator-posts'] }),
     onError: (e: any) => toast.error(e.message || 'Erro ao salvar'),
   })
 
@@ -289,12 +291,13 @@ function CreatorPostCard({
     <PostCard
       post={post}
       currentUserId={currentUserId}
+      isAuthenticated={isAuthenticated}
       onEdit={onEdit}
       onDelete={onDelete}
-      onLike={isAuthenticated ? onLike : () => { window.location.href = '/login' }}
-      onBookmark={isAuthenticated ? onBookmark : () => { window.location.href = '/login' }}
-      onComment={isAuthenticated ? onComment : () => { window.location.href = '/login' }}
-      onTip={isAuthenticated ? onTip : () => { window.location.href = '/login' }}
+      onLike={onLike}
+      onBookmark={onBookmark}
+      onComment={onComment}
+      onTip={onTip}
       comments={Array.isArray(comments) ? comments : []}
     />
   )

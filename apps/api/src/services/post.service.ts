@@ -158,9 +158,23 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
       ? await db.select().from(postMedia).where(inArray(postMedia.postId, postIds)).orderBy(postMedia.sortOrder)
       : []
 
+  const userLikes =
+    postIds.length > 0
+      ? await db.select({ postId: postLikes.postId }).from(postLikes).where(and(eq(postLikes.userId, userId), inArray(postLikes.postId, postIds)))
+      : []
+  const likedPostIds = new Set(userLikes.map((l) => l.postId))
+
+  const userBookmarks =
+    postIds.length > 0
+      ? await db.select({ postId: postBookmarks.postId }).from(postBookmarks).where(and(eq(postBookmarks.userId, userId), inArray(postBookmarks.postId, postIds)))
+      : []
+  const bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
+
   const postsWithMedia = feedPosts.map((post) => ({
     ...post,
     media: allMedia.filter((m) => m.postId === post.id),
+    isLiked: likedPostIds.has(post.id),
+    isBookmarked: bookmarkedPostIds.has(post.id),
   }))
 
   return { posts: postsWithMedia, total: feedPosts.length }
@@ -245,9 +259,22 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
       ? await db.select().from(postMedia).where(inArray(postMedia.postId, postIds)).orderBy(postMedia.sortOrder)
       : []
 
+  let likedPostIds = new Set<string>()
+  let bookmarkedPostIds = new Set<string>()
+
+  if (viewerId && postIds.length > 0) {
+    const userLikes = await db.select({ postId: postLikes.postId }).from(postLikes).where(and(eq(postLikes.userId, viewerId), inArray(postLikes.postId, postIds)))
+    likedPostIds = new Set(userLikes.map((l) => l.postId))
+
+    const userBookmarks = await db.select({ postId: postBookmarks.postId }).from(postBookmarks).where(and(eq(postBookmarks.userId, viewerId), inArray(postBookmarks.postId, postIds)))
+    bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
+  }
+
   const postsWithMedia = feedPosts.map((post) => ({
     ...post,
     media: allMedia.filter((m) => m.postId === post.id),
+    isLiked: likedPostIds.has(post.id),
+    isBookmarked: bookmarkedPostIds.has(post.id),
   }))
 
   return { posts: postsWithMedia, total: feedPosts.length }
