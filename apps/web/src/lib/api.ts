@@ -37,10 +37,15 @@ class ApiClient {
 
     if (token) headers['Authorization'] = `Bearer ${token}`
 
-    const res = await fetch(`${API_URL}/api/v1${path}`, {
-      ...options,
-      headers,
-    })
+    let res: Response
+    try {
+      res = await fetch(`${API_URL}/api/v1${path}`, {
+        ...options,
+        headers,
+      })
+    } catch {
+      throw new ApiError('NETWORK_ERROR', 'Servidor indisponivel. Verifique se a API esta rodando.', 0)
+    }
 
     const json = await res.json()
 
