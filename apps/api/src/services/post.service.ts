@@ -5,6 +5,23 @@ import { AppError } from './auth.service'
 import type { CreatePostInput, UpdatePostInput } from '@myfans/shared'
 
 export async function createPost(creatorId: string, input: CreatePostInput) {
+  // Block media upload for users without KYC verification
+  if (input.media && input.media.length > 0) {
+    const [creator] = await db
+      .select({ kycStatus: users.kycStatus })
+      .from(users)
+      .where(eq(users.id, creatorId))
+      .limit(1)
+
+    if (!creator || creator.kycStatus !== 'approved') {
+      throw new AppError(
+        'KYC_REQUIRED',
+        'Verificacao de identidade necessaria para postar imagens e videos',
+        403,
+      )
+    }
+  }
+
   const [post] = await db
     .insert(posts)
     .values({

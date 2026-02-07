@@ -7,6 +7,7 @@ type User = {
   displayName: string | null
   avatarUrl: string | null
   role: string
+  kycStatus?: string
 }
 
 type AuthStore = {

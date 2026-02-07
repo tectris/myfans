@@ -13,8 +13,9 @@ import { Input } from '@/components/ui/input'
 import { Avatar } from '@/components/ui/avatar'
 import { StreakCounter } from '@/components/gamification/streak-counter'
 import { LevelBadge } from '@/components/gamification/level-badge'
-import { Settings, User, LogOut, KeyRound } from 'lucide-react'
+import { Settings, User, LogOut, KeyRound, Shield, CheckCircle2, Clock, XCircle, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
+import Link from 'next/link'
 
 export default function SettingsPage() {
   const { user, logout } = useAuthStore()
@@ -113,6 +114,63 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* KYC verification status */}
+      <Card className="mb-6">
+        <CardHeader>
+          <h2 className="font-bold flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            Verificacao de identidade
+          </h2>
+        </CardHeader>
+        <CardContent>
+          {user?.kycStatus === 'approved' ? (
+            <div className="flex items-center gap-3 p-3 rounded-md bg-success/5 border border-success/20">
+              <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-success">Verificado</p>
+                <p className="text-xs text-muted">Sua identidade foi verificada com sucesso</p>
+              </div>
+            </div>
+          ) : user?.kycStatus === 'pending' ? (
+            <div className="flex items-center gap-3 p-3 rounded-md bg-warning/5 border border-warning/20">
+              <Clock className="w-5 h-5 text-warning shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-warning">Em analise</p>
+                <p className="text-xs text-muted">Seus documentos estao sendo analisados</p>
+              </div>
+            </div>
+          ) : user?.kycStatus === 'rejected' ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 rounded-md bg-error/5 border border-error/20">
+                <XCircle className="w-5 h-5 text-error shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-error">Rejeitado</p>
+                  <p className="text-xs text-muted">Sua verificacao foi rejeitada. Tente novamente com documentos mais claros.</p>
+                </div>
+              </div>
+              <Link href="/kyc">
+                <Button size="sm" className="w-full">
+                  Tentar novamente
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted">
+                Verifique sua identidade para poder postar imagens e videos na plataforma.
+              </p>
+              <Link href="/kyc">
+                <Button size="sm">
+                  <Shield className="w-4 h-4 mr-1" />
+                  Iniciar verificacao
+                </Button>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Edit profile */}
       <Card className="mb-6">

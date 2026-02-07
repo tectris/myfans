@@ -9,8 +9,10 @@ import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { ImagePlus, Video, Send, Eye, Lock, DollarSign, X, Loader2 } from 'lucide-react'
+import { ImagePlus, Video, Send, Eye, Lock, DollarSign, X, Loader2, Shield, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/lib/store'
+import Link from 'next/link'
 
 type UploadedMedia = {
   key: string
@@ -20,6 +22,8 @@ type UploadedMedia = {
 
 export default function CreateContentPage() {
   const router = useRouter()
+  const { user } = useAuthStore()
+  const kycApproved = user?.kycStatus === 'approved'
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [mediaFiles, setMediaFiles] = useState<UploadedMedia[]>([])
@@ -125,48 +129,74 @@ export default function CreateContentPage() {
             )}
 
             {/* Media upload buttons */}
-            <div className="flex gap-3">
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleFileUpload(file)
-                  e.target.value = ''
-                }}
-              />
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept="video/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleFileUpload(file)
-                  e.target.value = ''
-                }}
-              />
-              <button
-                type="button"
-                disabled={uploading}
-                onClick={() => imageInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 rounded-sm border border-border text-sm text-muted hover:text-foreground hover:border-primary transition-colors disabled:opacity-50"
-              >
-                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
-                Imagem
-              </button>
-              <button
-                type="button"
-                disabled={uploading}
-                onClick={() => videoInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 rounded-sm border border-border text-sm text-muted hover:text-foreground hover:border-primary transition-colors disabled:opacity-50"
-              >
-                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
-                Video
-              </button>
-            </div>
+            {kycApproved ? (
+              <div className="flex gap-3">
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleFileUpload(file)
+                    e.target.value = ''
+                  }}
+                />
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleFileUpload(file)
+                    e.target.value = ''
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2 rounded-sm border border-border text-sm text-muted hover:text-foreground hover:border-primary transition-colors disabled:opacity-50"
+                >
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+                  Imagem
+                </button>
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => videoInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2 rounded-sm border border-border text-sm text-muted hover:text-foreground hover:border-primary transition-colors disabled:opacity-50"
+                >
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
+                  Video
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-4 rounded-md bg-warning/5 border border-warning/20">
+                <Shield className="w-5 h-5 text-warning shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">
+                    {user?.kycStatus === 'pending'
+                      ? 'Verificacao em analise'
+                      : 'Verificacao necessaria'}
+                  </p>
+                  <p className="text-xs text-muted mt-0.5">
+                    {user?.kycStatus === 'pending'
+                      ? 'Seus documentos estao sendo analisados. Voce podera enviar midia em breve.'
+                      : 'Verifique sua identidade para poder postar imagens e videos.'}
+                  </p>
+                </div>
+                {user?.kycStatus !== 'pending' && (
+                  <Link href="/kyc">
+                    <Button size="sm" variant="outline">
+                      Verificar
+                      <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            )}
 
             {/* Visibility */}
             <div>
