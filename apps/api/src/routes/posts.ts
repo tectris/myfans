@@ -21,6 +21,31 @@ postsRoute.post('/', authMiddleware, creatorMiddleware, validateBody(createPostS
   }
 })
 
+postsRoute.get('/creator/:creatorId', async (c) => {
+  try {
+    const creatorId = c.req.param('creatorId')
+    const page = Number(c.req.query('page') || 1)
+    const limit = Number(c.req.query('limit') || 20)
+
+    let viewerId: string | undefined
+    const authHeader = c.req.header('Authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const jwt = await import('jsonwebtoken')
+        const { env } = await import('../config/env')
+        const payload = jwt.default.verify(authHeader.slice(7), env.JWT_SECRET) as { sub: string }
+        viewerId = payload.sub
+      } catch {}
+    }
+
+    const result = await postService.getCreatorPosts(creatorId, viewerId, page, limit)
+    return success(c, result)
+  } catch (e) {
+    if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)
+    throw e
+  }
+})
+
 postsRoute.get('/:id', async (c) => {
   try {
     const postId = c.req.param('id')

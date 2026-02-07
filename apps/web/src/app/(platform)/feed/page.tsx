@@ -85,16 +85,16 @@ export default function FeedPage() {
           {isCreatorOrAdmin && (
             <Link href="/creator/content">
               <Button size="sm">
-                <Plus className="w-4 h-4 mr-1" />
-                Novo post
+                <Plus className="w-4 h-4 md:mr-1" />
+                <span className="hidden md:inline">Novo post</span>
               </Button>
             </Link>
           )}
           {isAuthenticated && (
             <Link href="/explore">
               <Button variant="outline" size="sm">
-                <TrendingUp className="w-4 h-4 mr-1" />
-                Explorar
+                <TrendingUp className="w-4 h-4 md:mr-1" />
+                <span className="hidden md:inline">Explorar</span>
               </Button>
             </Link>
           )}
@@ -123,6 +123,7 @@ export default function FeedPage() {
               key={post.id}
               post={post}
               currentUserId={user?.id}
+              isAuthenticated={isAuthenticated}
               onEdit={(postId, editData) => editMutation.mutate({ postId, data: editData })}
               onDelete={(postId) => deleteMutation.mutate(postId)}
               onLike={(postId) => likeMutation.mutate(postId)}
@@ -162,6 +163,7 @@ export default function FeedPage() {
 function FeedPostCard({
   post,
   currentUserId,
+  isAuthenticated,
   onEdit,
   onDelete,
   onLike,
@@ -171,6 +173,7 @@ function FeedPostCard({
 }: {
   post: any
   currentUserId?: string | null
+  isAuthenticated: boolean
   onEdit: (postId: string, data: Record<string, unknown>) => void
   onDelete: (postId: string) => void
   onLike: (postId: string) => void
@@ -178,6 +181,8 @@ function FeedPostCard({
   onComment: (postId: string, content: string) => void
   onTip: (postId: string, creatorId: string, amount: number) => void
 }) {
+  const loginRedirect = () => { window.location.href = '/login' }
+
   const { data: commentsData } = useQuery({
     queryKey: ['comments', post.id],
     queryFn: async () => {
@@ -194,10 +199,10 @@ function FeedPostCard({
       currentUserId={currentUserId}
       onEdit={onEdit}
       onDelete={onDelete}
-      onLike={onLike}
-      onBookmark={onBookmark}
-      onComment={onComment}
-      onTip={onTip}
+      onLike={isAuthenticated ? onLike : loginRedirect}
+      onBookmark={isAuthenticated ? onBookmark : loginRedirect}
+      onComment={isAuthenticated ? onComment : () => loginRedirect()}
+      onTip={isAuthenticated ? onTip : () => loginRedirect()}
       comments={Array.isArray(comments) ? comments : []}
     />
   )

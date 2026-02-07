@@ -6,7 +6,6 @@ import {
   Home,
   Compass,
   MessageCircle,
-  Coins,
   BarChart3,
   Settings,
   Plus,
@@ -19,7 +18,6 @@ const fanLinks = [
   { href: '/feed', icon: Home, label: 'Feed' },
   { href: '/explore', icon: Compass, label: 'Explorar' },
   { href: '/messages', icon: MessageCircle, label: 'Mensagens' },
-  { href: '/wallet', icon: Coins, label: 'FanCoins' },
   { href: '/settings', icon: Settings, label: 'Configuracoes' },
 ]
 
@@ -29,7 +27,6 @@ const creatorLinks = [
   { href: '/feed', icon: Home, label: 'Feed' },
   { href: '/explore', icon: Compass, label: 'Explorar' },
   { href: '/messages', icon: MessageCircle, label: 'Mensagens' },
-  { href: '/wallet', icon: Coins, label: 'FanCoins' },
   { href: '/settings', icon: Settings, label: 'Configuracoes' },
 ]
 
@@ -39,7 +36,6 @@ const adminLinks = [
   { href: '/feed', icon: Home, label: 'Feed' },
   { href: '/explore', icon: Compass, label: 'Explorar' },
   { href: '/messages', icon: MessageCircle, label: 'Mensagens' },
-  { href: '/wallet', icon: Coins, label: 'FanCoins' },
   { href: '/settings', icon: Settings, label: 'Configuracoes' },
 ]
 

@@ -205,6 +205,54 @@ export async function getPublicFeed(page = 1, limit = 20) {
   return { posts: postsWithMedia, total: feedPosts.length }
 }
 
+export async function getCreatorPosts(creatorId: string, viewerId?: string, page = 1, limit = 20) {
+  const offset = (page - 1) * limit
+  const isOwner = viewerId === creatorId
+
+  const conditions = [eq(posts.creatorId, creatorId), eq(posts.isArchived, false)]
+  if (!isOwner) {
+    conditions.push(eq(posts.visibility, 'public'))
+  }
+
+  const feedPosts = await db
+    .select({
+      id: posts.id,
+      creatorId: posts.creatorId,
+      contentText: posts.contentText,
+      postType: posts.postType,
+      visibility: posts.visibility,
+      ppvPrice: posts.ppvPrice,
+      likeCount: posts.likeCount,
+      commentCount: posts.commentCount,
+      tipCount: posts.tipCount,
+      viewCount: posts.viewCount,
+      isPinned: posts.isPinned,
+      publishedAt: posts.publishedAt,
+      creatorUsername: users.username,
+      creatorDisplayName: users.displayName,
+      creatorAvatarUrl: users.avatarUrl,
+    })
+    .from(posts)
+    .innerJoin(users, eq(posts.creatorId, users.id))
+    .where(and(...conditions))
+    .orderBy(desc(posts.isPinned), desc(posts.publishedAt))
+    .limit(limit)
+    .offset(offset)
+
+  const postIds = feedPosts.map((p) => p.id)
+  const allMedia =
+    postIds.length > 0
+      ? await db.select().from(postMedia).where(inArray(postMedia.postId, postIds)).orderBy(postMedia.sortOrder)
+      : []
+
+  const postsWithMedia = feedPosts.map((post) => ({
+    ...post,
+    media: allMedia.filter((m) => m.postId === post.id),
+  }))
+
+  return { posts: postsWithMedia, total: feedPosts.length }
+}
+
 export async function updatePost(postId: string, creatorId: string, input: UpdatePostInput) {
   const [post] = await db
     .update(posts)
