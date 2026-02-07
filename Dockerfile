@@ -3,10 +3,10 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 WORKDIR /app
 
-# Copy everything (simpler, avoids cache issues)
+# Copy everything
 COPY . .
 
-# Install dependencies
+# Install dependencies (sharp needs native build tools)
 RUN pnpm install --frozen-lockfile
 
 # Force no cache on build step

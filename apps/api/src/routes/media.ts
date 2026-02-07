@@ -1,15 +1,19 @@
 import { Hono } from 'hono'
-import { randomUUID } from 'crypto'
 import { authMiddleware } from '../middleware/auth'
 import { uploadRateLimit } from '../middleware/rateLimit'
 import { success, error } from '../utils/response'
-
-// In-memory media store (for testing - files lost on restart)
-const mediaStore = new Map<string, { buffer: Buffer; contentType: string }>()
+import * as storage from '../services/storage.service'
+import * as mediaService from '../services/media.service'
+import * as bunny from '../services/bunny.service'
 
 const media = new Hono()
 
+/**
+ * Upload media file to R2 (images) or Bunny Stream (videos)
+ * Returns the public URL as `key` for use in post creation
+ */
 media.post('/upload', authMiddleware, uploadRateLimit, async (c) => {
+  const { userId } = c.get('user')
   const body = await c.req.parseBody()
   const file = body['file']
 
@@ -17,49 +21,65 @@ media.post('/upload', authMiddleware, uploadRateLimit, async (c) => {
     return error(c, 400, 'MISSING_FILE', 'Arquivo nao enviado')
   }
 
-  const allowedTypes = [
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'video/mp4',
-    'video/quicktime',
-  ]
-  if (!allowedTypes.includes(file.type)) {
-    return error(c, 400, 'INVALID_TYPE', 'Tipo de arquivo nao permitido')
+  const isImage = mediaService.isImageMimeType(file.type)
+  const isVideo = mediaService.isVideoMimeType(file.type)
+
+  if (!isImage && !isVideo) {
+    return error(c, 400, 'INVALID_TYPE', 'Tipo de arquivo nao permitido. Use JPEG, PNG, WebP, GIF, MP4, WebM, MOV')
   }
 
-  const maxSize = 50 * 1024 * 1024
+  const maxSize = isVideo ? 500 * 1024 * 1024 : 20 * 1024 * 1024
   if (file.size > maxSize) {
-    return error(c, 400, 'FILE_TOO_LARGE', 'Arquivo muito grande (max 50MB)')
+    return error(c, 400, 'FILE_TOO_LARGE', `Arquivo muito grande (max ${isVideo ? '500MB' : '20MB'})`)
   }
 
-  const key = randomUUID()
-  const arrayBuffer = await file.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const mediaType = isVideo ? 'video' : 'image'
 
-  mediaStore.set(key, { buffer, contentType: file.type })
+  if (isImage && storage.isR2Configured()) {
+    // Compress and upload to R2
+    const compressed = await mediaService.compressImage(buffer, 'post')
+    const key = storage.generateKey('posts/images', userId, `upload.${compressed.format}`)
+    const result = await storage.uploadFile(compressed.buffer, key, compressed.contentType)
 
-  const mediaType = file.type.startsWith('video/') ? 'video' : 'image'
-
-  return success(c, {
-    key,
-    mediaType,
-    fileSize: file.size,
-  })
-})
-
-media.get('/:key', async (c) => {
-  const key = c.req.param('key')
-  const stored = mediaStore.get(key)
-
-  if (!stored) {
-    return error(c, 404, 'NOT_FOUND', 'Arquivo nao encontrado')
+    return success(c, {
+      key: result.url,
+      mediaType,
+      fileSize: compressed.size,
+      originalSize: file.size,
+      savings: `${Math.round((1 - compressed.size / file.size) * 100)}%`,
+    })
   }
 
-  c.header('Content-Type', stored.contentType)
-  c.header('Cache-Control', 'public, max-age=3600')
-  return c.body(stored.buffer)
+  if (isVideo && bunny.isBunnyConfigured()) {
+    // Upload to Bunny Stream
+    const video = await bunny.createVideo(`upload-${Date.now()}`)
+    await bunny.uploadVideo(video.guid, buffer)
+
+    return success(c, {
+      key: bunny.getPlayUrl(video.guid),
+      mediaType,
+      fileSize: file.size,
+      videoId: video.guid,
+      status: 'encoding',
+      thumbnailUrl: bunny.getThumbnailUrl(video.guid),
+    })
+  }
+
+  if (isVideo && storage.isR2Configured()) {
+    // Fallback: upload video to R2 raw
+    const ext = file.name?.split('.').pop() || 'mp4'
+    const key = storage.generateKey('posts/videos', userId, `upload.${ext}`)
+    const result = await storage.uploadFile(buffer, key, file.type)
+
+    return success(c, {
+      key: result.url,
+      mediaType,
+      fileSize: file.size,
+    })
+  }
+
+  return error(c, 503, 'STORAGE_NOT_CONFIGURED', 'Nenhum servico de storage configurado')
 })
 
 export default media
