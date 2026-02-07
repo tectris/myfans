@@ -42,6 +42,11 @@ export async function getPost(postId: string, viewerId?: string) {
 
   if (!post) throw new AppError('NOT_FOUND', 'Post nao encontrado', 404)
 
+  // Hidden posts are only visible to their creator
+  if (!post.isVisible && viewerId !== post.creatorId) {
+    throw new AppError('NOT_FOUND', 'Post nao encontrado', 404)
+  }
+
   const media = await db
     .select()
     .from(postMedia)
@@ -136,6 +141,7 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
       postType: posts.postType,
       visibility: posts.visibility,
       ppvPrice: posts.ppvPrice,
+      isVisible: posts.isVisible,
       likeCount: posts.likeCount,
       commentCount: posts.commentCount,
       tipCount: posts.tipCount,
@@ -147,7 +153,13 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
     })
     .from(posts)
     .innerJoin(users, eq(posts.creatorId, users.id))
-    .where(and(inArray(posts.creatorId, creatorIds), eq(posts.isArchived, false)))
+    .where(
+      and(
+        inArray(posts.creatorId, creatorIds),
+        eq(posts.isArchived, false),
+        or(eq(posts.isVisible, true), eq(posts.creatorId, userId)),
+      ),
+    )
     .orderBy(desc(posts.publishedAt))
     .limit(limit)
     .offset(offset)
@@ -200,7 +212,7 @@ export async function getPublicFeed(page = 1, limit = 20) {
     })
     .from(posts)
     .innerJoin(users, eq(posts.creatorId, users.id))
-    .where(and(eq(posts.visibility, 'public'), eq(posts.isArchived, false)))
+    .where(and(eq(posts.visibility, 'public'), eq(posts.isArchived, false), eq(posts.isVisible, true)))
     .orderBy(desc(posts.publishedAt))
     .limit(limit)
     .offset(offset)
@@ -226,6 +238,7 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
   const conditions = [eq(posts.creatorId, creatorId), eq(posts.isArchived, false)]
   if (!isOwner) {
     conditions.push(eq(posts.visibility, 'public'))
+    conditions.push(eq(posts.isVisible, true))
   }
 
   const feedPosts = await db
@@ -236,6 +249,7 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
       postType: posts.postType,
       visibility: posts.visibility,
       ppvPrice: posts.ppvPrice,
+      isVisible: posts.isVisible,
       likeCount: posts.likeCount,
       commentCount: posts.commentCount,
       tipCount: posts.tipCount,
@@ -289,6 +303,24 @@ export async function updatePost(postId: string, creatorId: string, input: Updat
 
   if (!post) throw new AppError('NOT_FOUND', 'Post nao encontrado', 404)
   return post
+}
+
+export async function togglePostVisibility(postId: string, creatorId: string) {
+  const [post] = await db
+    .select({ id: posts.id, isVisible: posts.isVisible })
+    .from(posts)
+    .where(and(eq(posts.id, postId), eq(posts.creatorId, creatorId)))
+    .limit(1)
+
+  if (!post) throw new AppError('NOT_FOUND', 'Post nao encontrado', 404)
+
+  const [updated] = await db
+    .update(posts)
+    .set({ isVisible: !post.isVisible, updatedAt: new Date() })
+    .where(eq(posts.id, postId))
+    .returning()
+
+  return updated
 }
 
 export async function deletePost(postId: string, creatorId: string) {

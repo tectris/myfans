@@ -48,8 +48,9 @@ auth.post('/refresh', async (c) => {
 })
 
 auth.get('/me', authMiddleware, async (c) => {
-  const user = c.get('user')
-  return success(c, { userId: user.userId, role: user.role })
+  const { userId } = c.get('user')
+  const result = await authService.getMe(userId)
+  return success(c, result)
 })
 
 export default auth

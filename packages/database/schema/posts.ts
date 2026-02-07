@@ -16,6 +16,7 @@ export const posts = pgTable(
     ppvPrice: decimal('ppv_price', { precision: 10, scale: 2 }),
     isPinned: boolean('is_pinned').default(false).notNull(),
     isArchived: boolean('is_archived').default(false).notNull(),
+    isVisible: boolean('is_visible').default(true).notNull(),
     likeCount: integer('like_count').default(0).notNull(),
     commentCount: integer('comment_count').default(0).notNull(),
     tipCount: integer('tip_count').default(0).notNull(),

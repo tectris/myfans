@@ -14,6 +14,8 @@ import {
   Check,
   Send,
   Pin,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +32,7 @@ interface PostCardProps {
     visibility: string
     ppvPrice?: string | null
     isPinned?: boolean
+    isVisible?: boolean
     likeCount: number
     commentCount: number
     viewCount: number
@@ -54,6 +57,7 @@ interface PostCardProps {
   onLike?: (postId: string) => void
   onBookmark?: (postId: string) => void
   onEdit?: (postId: string, data: { contentText?: string; isPinned?: boolean }) => void
+  onToggleVisibility?: (postId: string) => void
   onDelete?: (postId: string) => void
   onComment?: (postId: string, content: string) => void
   onTip?: (postId: string, creatorId: string, amount: number) => void
@@ -74,6 +78,7 @@ export function PostCard({
   onLike,
   onBookmark,
   onEdit,
+  onToggleVisibility,
   onDelete,
   onComment,
   onTip,
@@ -82,6 +87,7 @@ export function PostCard({
   const hasMedia = post.media && post.media.length > 0
   const isLocked = post.visibility !== 'public' && !post.hasAccess
   const isOwner = currentUserId && post.creatorId === currentUserId
+  const isHidden = post.isVisible === false
   const [menuOpen, setMenuOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState(post.contentText || '')
@@ -171,7 +177,14 @@ export function PostCard({
   }
 
   return (
-    <Card className="mb-4">
+    <Card className={`mb-4 ${isHidden ? 'opacity-50 grayscale' : ''}`}>
+      {/* Hidden indicator */}
+      {isHidden && isOwner && (
+        <div className="px-4 pt-3 flex items-center gap-2 text-muted">
+          <EyeOff className="w-4 h-4" />
+          <span className="text-xs">Post oculto — somente voce pode ver</span>
+        </div>
+      )}
       {/* Header */}
       <div className="px-4 py-3 flex items-center gap-3">
         <Link href={`/creator/${post.creatorUsername}`}>
@@ -223,6 +236,16 @@ export function PostCard({
                   >
                     <Pin className="w-4 h-4" />
                     {post.isPinned ? 'Desafixar' : 'Fixar'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      onToggleVisibility?.(post.id)
+                      setMenuOpen(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-surface-light transition-colors"
+                  >
+                    {isHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    {isHidden ? 'Tornar visivel' : 'Ocultar post'}
                   </button>
                   {!confirmDelete ? (
                     <button

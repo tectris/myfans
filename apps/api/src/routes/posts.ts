@@ -82,6 +82,18 @@ postsRoute.patch('/:id', authMiddleware, creatorMiddleware, validateBody(updateP
   }
 })
 
+postsRoute.patch('/:id/toggle-visibility', authMiddleware, creatorMiddleware, async (c) => {
+  try {
+    const { userId } = c.get('user')
+    const postId = c.req.param('id')
+    const post = await postService.togglePostVisibility(postId, userId)
+    return success(c, post)
+  } catch (e) {
+    if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)
+    throw e
+  }
+})
+
 postsRoute.delete('/:id', authMiddleware, creatorMiddleware, async (c) => {
   try {
     const { userId } = c.get('user')

@@ -22,6 +22,7 @@ export const updatePostSchema = z.object({
   visibility: z.enum(['public', 'subscribers', 'ppv']).optional(),
   isPinned: z.boolean().optional(),
   isArchived: z.boolean().optional(),
+  isVisible: z.boolean().optional(),
 })
 
 export const createCommentSchema = z.object({

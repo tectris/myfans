@@ -98,6 +98,24 @@ export async function login(input: LoginInput) {
   }
 }
 
+export async function getMe(userId: string) {
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      username: users.username,
+      displayName: users.displayName,
+      avatarUrl: users.avatarUrl,
+      role: users.role,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  if (!user) throw new AppError('NOT_FOUND', 'Usuario nao encontrado', 404)
+  return user
+}
+
 export async function refreshTokens(token: string) {
   const payload = verifyRefreshToken(token)
   if (!payload) {
