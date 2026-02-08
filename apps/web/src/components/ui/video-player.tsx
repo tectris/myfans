@@ -8,9 +8,10 @@ interface VideoPlayerProps {
   className?: string
   poster?: string
   onPlay?: () => void
+  onPause?: () => void
 }
 
-export function VideoPlayer({ src, className = '', poster, onPlay }: VideoPlayerProps) {
+export function VideoPlayer({ src, className = '', poster, onPlay, onPause }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
 
@@ -58,6 +59,7 @@ export function VideoPlayer({ src, className = '', poster, onPlay }: VideoPlayer
       poster={poster}
       className={className}
       onPlay={onPlay}
+      onPause={onPause}
     />
   )
 }

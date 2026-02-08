@@ -1,5 +1,5 @@
-import { eq, desc, and, or, sql, inArray } from 'drizzle-orm'
-import { posts, postMedia, postLikes, postComments, postBookmarks, subscriptions, users, creatorProfiles, fancoinTransactions } from '@myfans/database'
+import { eq, desc, and, or, sql, inArray, gt } from 'drizzle-orm'
+import { posts, postMedia, postLikes, postComments, postBookmarks, subscriptions, users, creatorProfiles, fancoinTransactions, postViews } from '@myfans/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
 import type { CreatePostInput, UpdatePostInput } from '@myfans/shared'
@@ -491,8 +491,38 @@ export async function addComment(postId: string, userId: string, content: string
   return comment
 }
 
-export async function viewPost(postId: string) {
+const VIEW_DEDUP_HOURS = 24
+
+export async function viewPost(postId: string, userId?: string, ipAddress?: string) {
+  if (!userId && !ipAddress) return { counted: false }
+
+  const cutoff = new Date(Date.now() - VIEW_DEDUP_HOURS * 60 * 60 * 1000)
+
+  // Check for existing view within dedup window
+  const conditions = [eq(postViews.postId, postId), gt(postViews.viewedAt, cutoff)]
+  if (userId) {
+    conditions.push(eq(postViews.userId, userId))
+  } else {
+    conditions.push(eq(postViews.ipAddress, ipAddress!))
+  }
+
+  const [existing] = await db
+    .select({ id: postViews.id })
+    .from(postViews)
+    .where(and(...conditions))
+    .limit(1)
+
+  if (existing) return { counted: false }
+
+  // Record new view and increment counter
+  await db.insert(postViews).values({
+    postId,
+    userId: userId || null,
+    ipAddress: ipAddress || null,
+  })
   await db.update(posts).set({ viewCount: sql`${posts.viewCount} + 1` }).where(eq(posts.id, postId))
+
+  return { counted: true }
 }
 
 export async function sharePost(postId: string) {

@@ -143,12 +143,28 @@ postsRoute.post('/:id/comments', authMiddleware, validateBody(createCommentSchem
   return success(c, comment)
 })
 
-// Track view (increment viewCount)
+// Track view with deduplication (user/IP + 24h window)
 postsRoute.post('/:id/view', async (c) => {
   const postId = c.req.param('id')
   try {
-    await postService.viewPost(postId)
-    return success(c, { viewed: true })
+    // Optional auth - extract userId if available
+    let userId: string | undefined
+    const authHeader = c.req.header('Authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const jwt = await import('jsonwebtoken')
+        const { env } = await import('../config/env')
+        const payload = jwt.default.verify(authHeader.slice(7), env.JWT_SECRET) as { sub: string }
+        userId = payload.sub
+      } catch {}
+    }
+
+    const ipAddress = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+      || c.req.header('x-real-ip')
+      || 'unknown'
+
+    const result = await postService.viewPost(postId, userId, ipAddress)
+    return success(c, { viewed: true, counted: result.counted })
   } catch (e) {
     if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)
     throw e

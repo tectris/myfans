@@ -1,5 +1,5 @@
-import { eq, and, sql } from 'drizzle-orm'
-import { users, userSettings, creatorProfiles, userGamification, fancoinWallets, follows, posts } from '@myfans/database'
+import { eq, and, gt, sql } from 'drizzle-orm'
+import { users, userSettings, creatorProfiles, userGamification, fancoinWallets, follows, posts, profileViewLogs } from '@myfans/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
 import { hashPassword, verifyPassword } from '../utils/password'
@@ -28,7 +28,9 @@ export async function getProfile(userId: string) {
   return user
 }
 
-export async function getPublicProfile(username: string) {
+const PROFILE_VIEW_DEDUP_HOURS = 24
+
+export async function getPublicProfile(username: string, viewerUserId?: string, ipAddress?: string) {
   const [user] = await db
     .select({
       id: users.id,
@@ -73,11 +75,39 @@ export async function getPublicProfile(username: string) {
     .from(posts)
     .where(and(eq(posts.creatorId, user.id), eq(posts.isArchived, false), eq(posts.isVisible, true)))
 
-  // Increment profile views (fire and forget)
-  db.update(users)
-    .set({ profileViews: sql`${users.profileViews} + 1` })
-    .where(eq(users.id, user.id))
-    .catch(() => {})
+  // Deduplicated profile view tracking (fire and forget)
+  if (viewerUserId || ipAddress) {
+    const isOwnProfile = viewerUserId === user.id
+    if (!isOwnProfile) {
+      const cutoff = new Date(Date.now() - PROFILE_VIEW_DEDUP_HOURS * 60 * 60 * 1000)
+      const conditions = [eq(profileViewLogs.profileUserId, user.id), gt(profileViewLogs.viewedAt, cutoff)]
+      if (viewerUserId) {
+        conditions.push(eq(profileViewLogs.viewerUserId, viewerUserId))
+      } else {
+        conditions.push(eq(profileViewLogs.ipAddress, ipAddress!))
+      }
+
+      db.select({ id: profileViewLogs.id })
+        .from(profileViewLogs)
+        .where(and(...conditions))
+        .limit(1)
+        .then(([existing]) => {
+          if (!existing) {
+            return Promise.all([
+              db.insert(profileViewLogs).values({
+                profileUserId: user.id,
+                viewerUserId: viewerUserId || null,
+                ipAddress: ipAddress || null,
+              }),
+              db.update(users)
+                .set({ profileViews: sql`${users.profileViews} + 1` })
+                .where(eq(users.id, user.id)),
+            ])
+          }
+        })
+        .catch(() => {})
+    }
+  }
 
   return {
     ...user,

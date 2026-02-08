@@ -104,7 +104,24 @@ usersRoute.get('/:userId/follow', authMiddleware, async (c) => {
 usersRoute.get('/:username', async (c) => {
   try {
     const username = c.req.param('username')
-    const profile = await userService.getPublicProfile(username)
+
+    // Optional auth for view dedup
+    let viewerUserId: string | undefined
+    const authHeader = c.req.header('Authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const jwt = await import('jsonwebtoken')
+        const { env } = await import('../config/env')
+        const payload = jwt.default.verify(authHeader.slice(7), env.JWT_SECRET) as { sub: string }
+        viewerUserId = payload.sub
+      } catch {}
+    }
+
+    const ipAddress = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+      || c.req.header('x-real-ip')
+      || 'unknown'
+
+    const profile = await userService.getPublicProfile(username, viewerUserId, ipAddress)
     return success(c, profile)
   } catch (e) {
     if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)

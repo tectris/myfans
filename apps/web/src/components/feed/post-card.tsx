@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   Heart,
   MessageCircle,
@@ -116,6 +116,14 @@ export function PostCard({
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [viewCount, setViewCount] = useState(post.viewCount)
   const [viewTracked, setViewTracked] = useState(false)
+  const videoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (videoTimerRef.current) clearTimeout(videoTimerRef.current)
+    }
+  }, [])
 
   function handleLike() {
     if (!isAuthenticated) {
@@ -193,17 +201,32 @@ export function PostCard({
     if (!showTip) setShowComments(false)
   }
 
-  function trackView() {
+  function sendViewTrack() {
     if (viewTracked) return
     setViewTracked(true)
     setViewCount((c) => c + 1)
     api.post(`/posts/${post.id}/view`, {}).catch(() => {})
   }
 
+  // Video: start 3s timer on play, cancel on pause
+  function handleVideoPlay() {
+    if (viewTracked) return
+    videoTimerRef.current = setTimeout(() => {
+      sendViewTrack()
+    }, 3000)
+  }
+
+  function handleVideoPause() {
+    if (videoTimerRef.current) {
+      clearTimeout(videoTimerRef.current)
+      videoTimerRef.current = null
+    }
+  }
+
   function openLightbox(index: number) {
     setLightboxIndex(index)
     setLightboxOpen(true)
-    trackView()
+    sendViewTrack()
   }
 
   async function handleShare() {
@@ -455,7 +478,8 @@ export function PostCard({
                   src={post.media![0].storageKey}
                   poster={post.media![0].thumbnailUrl || undefined}
                   className="w-full h-full object-cover"
-                  onPlay={trackView}
+                  onPlay={handleVideoPlay}
+                  onPause={handleVideoPause}
                 />
               )}
             </div>
@@ -480,7 +504,8 @@ export function PostCard({
                       src={m.storageKey}
                       poster={m.thumbnailUrl || undefined}
                       className="w-full h-full object-cover"
-                      onPlay={trackView}
+                      onPlay={handleVideoPlay}
+                  onPause={handleVideoPause}
                     />
                   )}
                   {i === 3 && post.media!.length > 4 && (
