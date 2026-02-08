@@ -204,16 +204,19 @@ export function PostCard({
   function sendViewTrack() {
     if (viewTracked) return
     setViewTracked(true)
-    setViewCount((c) => c + 1)
-    api.post(`/posts/${post.id}/view`, {}).catch(() => {})
+    api.post<{ counted: boolean }>(`/posts/${post.id}/view`, {})
+      .then((res) => {
+        if (res.data?.counted) setViewCount((c) => c + 1)
+      })
+      .catch(() => {})
   }
 
-  // Video: start 3s timer on play, cancel on pause
+  // Video: start 10s timer on play, cancel on pause
   function handleVideoPlay() {
     if (viewTracked) return
     videoTimerRef.current = setTimeout(() => {
       sendViewTrack()
-    }, 3000)
+    }, 10000)
   }
 
   function handleVideoPause() {
