@@ -87,10 +87,10 @@ export default function AdminPaymentsPage() {
           <div className="flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-primary" />
             <span className="font-bold">{formatCurrency(Number(payout.amount))}</span>
-            <Badge variant="outline">{payout.method?.toUpperCase()}</Badge>
+            <Badge variant="default">{payout.method?.toUpperCase()}</Badge>
             <Badge variant={
               payout.status === 'completed' ? 'success'
-                : payout.status === 'rejected' ? 'destructive'
+                : payout.status === 'rejected' ? 'error'
                   : payout.status === 'pending_approval' ? 'warning' : 'secondary'
             }>
               {payout.status === 'pending_approval' ? 'Aguardando Aprovacao'
@@ -130,7 +130,7 @@ export default function AdminPaymentsPage() {
               <div className="flex-1 space-y-2">
                 <Input placeholder="Motivo da rejeicao" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
                 <div className="flex gap-2">
-                  <Button size="sm" variant="destructive" loading={rejectMutation.isPending}
+                  <Button size="sm" variant="danger" loading={rejectMutation.isPending}
                     onClick={() => rejectMutation.mutate({ id: payout.id, reason: rejectReason })}>
                     Confirmar Rejeicao
                   </Button>
@@ -145,7 +145,7 @@ export default function AdminPaymentsPage() {
                   onClick={() => approveMutation.mutate(payout.id)}>
                   <CheckCircle2 className="w-4 h-4 mr-1" /> Aprovar
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => setRejectId(payout.id)}>
+                <Button size="sm" variant="danger" onClick={() => setRejectId(payout.id)}>
                   <XCircle className="w-4 h-4 mr-1" /> Rejeitar
                 </Button>
               </>
