@@ -79,10 +79,11 @@ export default function CreatorProfilePage() {
     enabled: !!profile?.id && isAuthenticated && profile.id !== user?.id,
   })
 
-  const { data: postsData } = useQuery({
+  const { data: postsData, error: postsError } = useQuery({
     queryKey: ['creator-posts', profile?.id],
     queryFn: async () => {
       const res = await api.get<{ posts: any[]; total: number }>(`/posts/creator/${profile.id}`)
+      console.log('[creator-posts] API response:', { total: res.data?.total, postCount: res.data?.posts?.length, visibilities: res.data?.posts?.map((p: any) => p.visibility) })
       return res.data
     },
     enabled: !!profile?.id,
@@ -543,6 +544,10 @@ export default function CreatorProfilePage() {
                 onSubscribe={() => handleSubscribe()}
               />
             ))}
+          </div>
+        ) : postsError ? (
+          <div className="text-center py-12 text-error">
+            <p>Erro ao carregar posts: {(postsError as any)?.message || 'Erro desconhecido'}</p>
           </div>
         ) : (
           <div className="text-center py-12 text-muted">

@@ -485,7 +485,49 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
     }
   })
 
+  // Debug: log post visibility breakdown
+  const visBreakdown = feedPosts.reduce((acc: Record<string, number>, p) => {
+    acc[p.visibility] = (acc[p.visibility] || 0) + 1
+    return acc
+  }, {})
+  console.log(`[getCreatorPosts] creatorId=${creatorId} viewerId=${viewerId || 'anonymous'} isOwner=${isOwner} total=${feedPosts.length} breakdown=`, visBreakdown)
+
   return { posts: postsWithMedia, total: feedPosts.length }
+}
+
+// Debug: raw count of posts by visibility for a creator
+export async function getCreatorPostsDebug(creatorId: string) {
+  const allPosts = await db
+    .select({
+      id: posts.id,
+      visibility: posts.visibility,
+      isVisible: posts.isVisible,
+      isArchived: posts.isArchived,
+      publishedAt: posts.publishedAt,
+      contentText: posts.contentText,
+    })
+    .from(posts)
+    .where(eq(posts.creatorId, creatorId))
+
+  const breakdown = allPosts.reduce((acc: Record<string, number>, p) => {
+    acc[p.visibility] = (acc[p.visibility] || 0) + 1
+    return acc
+  }, {})
+
+  return {
+    creatorId,
+    totalInDb: allPosts.length,
+    visibilityBreakdown: breakdown,
+    archivedCount: allPosts.filter((p) => p.isArchived).length,
+    hiddenCount: allPosts.filter((p) => !p.isVisible).length,
+    posts: allPosts.map((p) => ({
+      id: p.id,
+      visibility: p.visibility,
+      isVisible: p.isVisible,
+      isArchived: p.isArchived,
+      hasText: !!p.contentText,
+    })),
+  }
 }
 
 export async function updatePost(postId: string, creatorId: string, input: UpdatePostInput) {
