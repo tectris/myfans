@@ -54,4 +54,17 @@ subscriptionsRoute.get('/check/:creatorId', authMiddleware, async (c) => {
   return success(c, { isSubscribed })
 })
 
+subscriptionsRoute.get('/status/:creatorId', authMiddleware, async (c) => {
+  const { userId } = c.get('user')
+  const creatorId = c.req.param('creatorId')
+  const result = await subscriptionService.getSubscriptionStatus(userId, creatorId)
+  return success(c, result)
+})
+
+// Expire overdue subscriptions (can be called by cron or admin)
+subscriptionsRoute.post('/expire', async (c) => {
+  const expired = await subscriptionService.expireOverdueSubscriptions()
+  return success(c, { expired: expired.length })
+})
+
 export default subscriptionsRoute

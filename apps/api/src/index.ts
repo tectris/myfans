@@ -154,4 +154,14 @@ const port = Number(process.env.PORT) || env.PORT
 console.log(`FanDreams API v2.4.0 running on 0.0.0.0:${port}`)
 serve({ fetch: app.fetch, port, hostname: '0.0.0.0' })
 
+// Periodic task: expire overdue subscriptions every 15 minutes
+import { expireOverdueSubscriptions } from './services/subscription.service'
+setInterval(async () => {
+  try {
+    await expireOverdueSubscriptions()
+  } catch (e) {
+    console.error('Error expiring subscriptions:', e)
+  }
+}, 15 * 60 * 1000)
+
 export default app

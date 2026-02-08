@@ -14,7 +14,7 @@ import { SubscribeDrawer } from '@/components/subscription/subscribe-drawer'
 import { PpvUnlockDrawer } from '@/components/feed/ppv-unlock-drawer'
 import { LevelBadge } from '@/components/gamification/level-badge'
 import { formatCurrency, formatNumber } from '@/lib/utils'
-import { Users, Calendar, Crown, Star, Camera, ImagePlus, UserPlus, UserCheck, Share2, FileText, Eye, Image, Video } from 'lucide-react'
+import { Users, Calendar, Crown, Star, Camera, ImagePlus, UserPlus, UserCheck, Share2, FileText, Eye, Image, Video, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -28,6 +28,7 @@ export default function CreatorProfilePage() {
   const [selectedTier, setSelectedTier] = useState<any>(null)
   const [ppvDrawerOpen, setPpvDrawerOpen] = useState(false)
   const [ppvPost, setPpvPost] = useState<any>(null)
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
   const searchParams = useSearchParams()
@@ -36,7 +37,7 @@ export default function CreatorProfilePage() {
   useEffect(() => {
     if (subscriptionStatus === 'pending') {
       toast.info('Assinatura em processamento. Voce sera notificado quando for confirmada.')
-      queryClient.invalidateQueries({ queryKey: ['subscription-check'] })
+      queryClient.invalidateQueries({ queryKey: ['subscription-status'] })
     }
   }, [subscriptionStatus, queryClient])
 
@@ -49,9 +50,21 @@ export default function CreatorProfilePage() {
   })
 
   const { data: subscription } = useQuery({
-    queryKey: ['subscription-check', profile?.id],
+    queryKey: ['subscription-status', profile?.id],
     queryFn: async () => {
-      const res = await api.get<{ isSubscribed: boolean }>(`/subscriptions/check/${profile.id}`)
+      const res = await api.get<{
+        isSubscribed: boolean
+        subscription: {
+          id: string
+          status: string
+          pricePaid: string
+          currentPeriodEnd: string | null
+          cancelledAt: string | null
+          autoRenew: boolean
+          isCancelled: boolean
+          createdAt: string
+        } | null
+      }>(`/subscriptions/status/${profile.id}`)
       return res.data
     },
     enabled: !!profile?.id && isAuthenticated && profile.id !== user?.id,
@@ -177,6 +190,16 @@ export default function CreatorProfilePage() {
       toast.success('Imagem de capa atualizada!')
     },
     onError: (e: any) => toast.error(e.message || 'Erro ao enviar imagem'),
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: (subscriptionId: string) => api.delete(`/subscriptions/${subscriptionId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscription-status', profile?.id] })
+      setCancelModalOpen(false)
+      toast.success('Assinatura cancelada. Acesso mantido ate o fim do periodo.')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao cancelar assinatura'),
   })
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -371,9 +394,15 @@ export default function CreatorProfilePage() {
                       : 'Assinar'}
                   </Button>
                 )}
-                {isSubscribed && (
-                  <Button variant="outline" disabled>
+                {isSubscribed && !subscription?.subscription?.isCancelled && (
+                  <Button variant="outline" onClick={() => setCancelModalOpen(true)}>
                     <Crown className="w-4 h-4 mr-1" /> Assinante
+                  </Button>
+                )}
+                {isSubscribed && subscription?.subscription?.isCancelled && (
+                  <Button variant="outline" disabled className="text-muted">
+                    <Crown className="w-4 h-4 mr-1" />
+                    Ativo ate {new Date(subscription.subscription.currentPeriodEnd!).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                   </Button>
                 )}
               </>
@@ -521,6 +550,59 @@ export default function CreatorProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Cancel Subscription Modal */}
+      {cancelModalOpen && subscription?.subscription && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setCancelModalOpen(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-surface border border-border rounded-md shadow-xl max-w-sm w-full p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-warning" />
+                </div>
+                <h3 className="font-bold text-lg">Cancelar assinatura</h3>
+              </div>
+              <p className="text-sm text-muted mb-2">
+                Tem certeza que deseja cancelar sua assinatura de{' '}
+                <span className="font-semibold text-foreground">{profile.displayName || profile.username}</span>?
+              </p>
+              <div className="bg-surface-light rounded-sm p-3 mb-4">
+                <p className="text-sm">
+                  Seu acesso continua ativo ate{' '}
+                  <span className="font-semibold">
+                    {new Date(subscription.subscription.currentPeriodEnd!).toLocaleDateString('pt-BR', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </p>
+                <p className="text-xs text-muted mt-1">
+                  Nenhuma cobranca futura sera realizada. Voce pode reassinar a qualquer momento.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setCancelModalOpen(false)}
+                >
+                  Manter assinatura
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="flex-1 text-error hover:bg-error/10"
+                  onClick={() => cancelMutation.mutate(subscription.subscription!.id)}
+                  loading={cancelMutation.isPending}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Subscribe Drawer */}
       {profile && (

@@ -1,4 +1,4 @@
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, lt, ne } from 'drizzle-orm'
 import { subscriptions, creatorProfiles, subscriptionTiers, payments, users } from '@fandreams/database'
 import { db } from '../config/database'
 import { env } from '../config/env'
@@ -271,6 +271,12 @@ export async function activateSubscriptionFromWebhook(
   }
 
   if (mpStatus === 'cancelled') {
+    // If user already cancelled through our platform, keep access until period end
+    if (sub.cancelledAt && sub.currentPeriodEnd && sub.currentPeriodEnd > new Date()) {
+      // Already handled — user keeps access until currentPeriodEnd
+      return { processed: true, status: 'cancelled_graceful', subscriptionId: sub.id }
+    }
+
     await db
       .update(subscriptions)
       .set({ status: 'cancelled', cancelledAt: new Date(), autoRenew: false, updatedAt: new Date() })
@@ -346,7 +352,7 @@ export async function recordSubscriptionPayment(
   return { processed: true, status: mpPaymentStatus }
 }
 
-// ── Cancel subscription ──
+// ── Cancel subscription (keeps access until currentPeriodEnd) ──
 
 export async function cancelSubscription(subscriptionId: string, fanId: string) {
   const [sub] = await db
@@ -357,7 +363,15 @@ export async function cancelSubscription(subscriptionId: string, fanId: string) 
 
   if (!sub) throw new AppError('NOT_FOUND', 'Assinatura nao encontrada', 404)
 
-  // Cancel on MP if has provider subscription
+  if (sub.status !== 'active') {
+    throw new AppError('INVALID', 'Assinatura nao esta ativa', 400)
+  }
+
+  if (sub.cancelledAt) {
+    throw new AppError('ALREADY_CANCELLED', 'Assinatura ja foi cancelada. Acesso ativo ate o fim do periodo.', 409)
+  }
+
+  // Cancel recurring billing on MP (stops future charges)
   if (sub.providerSubId && sub.paymentProvider === 'mercadopago') {
     try {
       await paymentService.cancelMpSubscription(sub.providerSubId)
@@ -367,10 +381,12 @@ export async function cancelSubscription(subscriptionId: string, fanId: string) 
     }
   }
 
+  // Keep status 'active' — user retains access until currentPeriodEnd
+  // autoRenew = false prevents future charges
+  // cancelledAt marks when cancellation was requested
   const [updated] = await db
     .update(subscriptions)
     .set({
-      status: 'cancelled',
       cancelledAt: new Date(),
       autoRenew: false,
       updatedAt: new Date(),
@@ -379,6 +395,46 @@ export async function cancelSubscription(subscriptionId: string, fanId: string) 
     .returning()
 
   return updated
+}
+
+// ── Expire subscriptions past their period ──
+
+export async function expireOverdueSubscriptions() {
+  const now = new Date()
+
+  // Expire active subscriptions where:
+  // - autoRenew is false (cancelled by user)
+  // - currentPeriodEnd has passed
+  const expired = await db
+    .update(subscriptions)
+    .set({
+      status: 'expired',
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(subscriptions.status, 'active'),
+        eq(subscriptions.autoRenew, false),
+        lt(subscriptions.currentPeriodEnd, now),
+      ),
+    )
+    .returning({ id: subscriptions.id, fanId: subscriptions.fanId, creatorId: subscriptions.creatorId })
+
+  // Decrement subscriber count for each expired subscription
+  for (const sub of expired) {
+    await db
+      .update(creatorProfiles)
+      .set({
+        totalSubscribers: sql`GREATEST(${creatorProfiles.totalSubscribers} - 1, 0)`,
+      })
+      .where(eq(creatorProfiles.userId, sub.creatorId))
+  }
+
+  if (expired.length > 0) {
+    console.log(`Expired ${expired.length} overdue subscriptions`)
+  }
+
+  return expired
 }
 
 // ── Queries ──
@@ -414,4 +470,47 @@ export async function checkSubscription(fanId: string, creatorId: string) {
     .limit(1)
 
   return !!sub
+}
+
+export async function getSubscriptionStatus(fanId: string, creatorId: string) {
+  const [sub] = await db
+    .select({
+      id: subscriptions.id,
+      status: subscriptions.status,
+      pricePaid: subscriptions.pricePaid,
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+      cancelledAt: subscriptions.cancelledAt,
+      autoRenew: subscriptions.autoRenew,
+      createdAt: subscriptions.createdAt,
+    })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.fanId, fanId),
+        eq(subscriptions.creatorId, creatorId),
+      ),
+    )
+    .limit(1)
+
+  if (!sub) {
+    return { isSubscribed: false, subscription: null }
+  }
+
+  const isActive = sub.status === 'active'
+  const isCancelled = !!sub.cancelledAt && isActive
+  const periodEnd = sub.currentPeriodEnd
+
+  return {
+    isSubscribed: isActive,
+    subscription: {
+      id: sub.id,
+      status: sub.status,
+      pricePaid: sub.pricePaid,
+      currentPeriodEnd: periodEnd,
+      cancelledAt: sub.cancelledAt,
+      autoRenew: sub.autoRenew,
+      isCancelled,
+      createdAt: sub.createdAt,
+    },
+  }
 }

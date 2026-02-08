@@ -63,7 +63,7 @@ export function SubscribeDrawer({ open, onClose, creator, tier }: SubscribeDrawe
         if (res.data?.isSubscribed) {
           setState('success')
           if (pollRef.current) clearInterval(pollRef.current)
-          queryClient.invalidateQueries({ queryKey: ['subscription-check', creator.id] })
+          queryClient.invalidateQueries({ queryKey: ['subscription-status', creator.id] })
           queryClient.invalidateQueries({ queryKey: ['profile'] })
           toast.success(`Assinatura ativada!`)
         }
