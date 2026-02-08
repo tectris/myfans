@@ -66,6 +66,21 @@ paymentsRoute.post('/paypal/capture', authMiddleware, async (c) => {
   }
 })
 
+// Create a PPV checkout (MercadoPago)
+paymentsRoute.post('/checkout/ppv', authMiddleware, async (c) => {
+  try {
+    const { userId } = c.get('user')
+    const { postId, paymentMethod } = await c.req.json()
+    if (!postId) return error(c, 400, 'MISSING_POST', 'Post ID obrigatorio')
+
+    const result = await paymentService.createPpvPayment(userId, postId, paymentMethod || 'pix')
+    return success(c, result)
+  } catch (e) {
+    if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)
+    throw e
+  }
+})
+
 // ── Webhooks (no auth) ──
 
 async function processMpWebhookEvent(type: string, dataId: string) {

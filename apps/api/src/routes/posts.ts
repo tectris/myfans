@@ -5,6 +5,7 @@ import { authMiddleware, creatorMiddleware } from '../middleware/auth'
 import { eq, and } from 'drizzle-orm'
 import { posts, reports } from '@fandreams/database'
 import * as postService from '../services/post.service'
+import * as fancoinService from '../services/fancoin.service'
 import * as gamificationService from '../services/gamification.service'
 import { success, error } from '../utils/response'
 import { AppError } from '../services/auth.service'
@@ -210,6 +211,19 @@ postsRoute.post('/:id/report', authMiddleware, async (c) => {
       description: description || null,
     })
     return success(c, { reported: true })
+  } catch (e) {
+    if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)
+    throw e
+  }
+})
+
+// Unlock PPV post with FanCoins
+postsRoute.post('/:id/unlock', authMiddleware, async (c) => {
+  try {
+    const { userId } = c.get('user')
+    const postId = c.req.param('id')
+    const result = await fancoinService.unlockPpv(userId, postId)
+    return success(c, result)
   } catch (e) {
     if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)
     throw e

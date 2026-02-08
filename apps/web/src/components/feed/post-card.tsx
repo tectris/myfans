@@ -69,6 +69,7 @@ interface PostCardProps {
   onDelete?: (postId: string) => void
   onComment?: (postId: string, content: string) => void
   onTip?: (postId: string, creatorId: string, amount: number) => void
+  onPpvUnlock?: (post: PostCardProps['post']) => void
   comments?: Array<{
     id: string
     content: string
@@ -90,6 +91,7 @@ export function PostCard({
   onDelete,
   onComment,
   onTip,
+  onPpvUnlock,
   comments,
 }: PostCardProps) {
   const hasMedia = post.media && post.media.length > 0
@@ -489,7 +491,6 @@ export function PostCard({
             </div>
           ) : isLocked ? (
             <div className="aspect-video bg-surface-dark relative overflow-hidden flex flex-col items-center justify-center gap-3">
-              {/* Blurred thumbnail preview if available */}
               {post.media![0]?.thumbnailUrl && (
                 <img
                   src={post.media![0].thumbnailUrl}
@@ -501,10 +502,22 @@ export function PostCard({
                 <div className="w-14 h-14 rounded-full bg-surface/80 backdrop-blur-sm flex items-center justify-center">
                   <Lock className="w-7 h-7 text-primary" />
                 </div>
-                <p className="text-sm font-medium">Conteudo exclusivo para assinantes</p>
-                <Link href={`/creator/${post.creatorUsername}`}>
-                  <Button size="sm">Assinar para desbloquear</Button>
-                </Link>
+                {post.visibility === 'ppv' && post.ppvPrice ? (
+                  <>
+                    <p className="text-sm font-medium">Conteudo pago (PPV)</p>
+                    <Button size="sm" onClick={() => onPpvUnlock?.(post)}>
+                      <Coins className="w-4 h-4 mr-1" />
+                      Desbloquear por {formatCurrency(post.ppvPrice)}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium">Conteudo exclusivo para assinantes</p>
+                    <Link href={`/creator/${post.creatorUsername}`}>
+                      <Button size="sm">Assinar para desbloquear</Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           ) : post.media!.length === 1 ? (

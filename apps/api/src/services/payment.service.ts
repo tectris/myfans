@@ -1,5 +1,5 @@
-import { eq, and } from 'drizzle-orm'
-import { payments } from '@fandreams/database'
+import { eq, and, sql } from 'drizzle-orm'
+import { payments, posts } from '@fandreams/database'
 import { db } from '../config/database'
 import { env } from '../config/env'
 import { AppError } from './auth.service'
@@ -461,12 +461,28 @@ async function processPaymentConfirmation(
 
   if (status === 'completed') {
     const meta = payment.metadata as any
-    const packageId = meta?.packageId
-    if (packageId) {
-      const pkg = FANCOIN_PACKAGES.find((p) => p.id === packageId)
-      if (pkg) {
-        await fancoinService.creditPurchase(payment.userId, pkg.coins + (pkg.bonus || 0), pkg.label, payment.id)
+
+    if (payment.type === 'fancoin_purchase') {
+      const packageId = meta?.packageId
+      if (packageId) {
+        const pkg = FANCOIN_PACKAGES.find((p) => p.id === packageId)
+        if (pkg) {
+          await fancoinService.creditPurchase(payment.userId, pkg.coins + (pkg.bonus || 0), pkg.label, payment.id)
+        }
       }
+    }
+
+    if (payment.type === 'ppv' && payment.recipientId) {
+      // Credit creator earnings
+      const creatorAmount = Number(payment.creatorAmount || 0)
+      if (creatorAmount > 0) {
+        const { creatorProfiles } = await import('@fandreams/database')
+        await db
+          .update(creatorProfiles)
+          .set({ totalEarnings: sql`${creatorProfiles.totalEarnings} + ${creatorAmount}` })
+          .where(eq(creatorProfiles.userId, payment.recipientId))
+      }
+      console.log(`PPV unlocked for user ${payment.userId}, post ${meta?.postId}`)
     }
   }
 
@@ -524,6 +540,99 @@ export async function getPaymentStatus(paymentId: string, userId: string) {
 
   if (!payment) throw new AppError('NOT_FOUND', 'Pagamento nao encontrado', 404)
   return payment
+}
+
+// ── PPV Payment via MercadoPago ──
+
+export async function createPpvPayment(userId: string, postId: string, paymentMethod: string) {
+  // Get post info
+  const [post] = await db
+    .select({ id: posts.id, creatorId: posts.creatorId, ppvPrice: posts.ppvPrice, visibility: posts.visibility, contentText: posts.contentText })
+    .from(posts)
+    .where(eq(posts.id, postId))
+    .limit(1)
+
+  if (!post) throw new AppError('NOT_FOUND', 'Post nao encontrado', 404)
+  if (post.visibility !== 'ppv' || !post.ppvPrice) throw new AppError('INVALID', 'Este post nao e PPV', 400)
+
+  // Check already unlocked
+  const [existing] = await db
+    .select({ id: payments.id })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.userId, userId),
+        eq(payments.type, 'ppv'),
+        eq(payments.status, 'completed'),
+        sql`${payments.metadata}->>'postId' = ${postId}`,
+      ),
+    )
+    .limit(1)
+  if (existing) throw new AppError('ALREADY_UNLOCKED', 'Voce ja desbloqueou este post', 409)
+
+  const amount = Number(post.ppvPrice)
+  const platformFee = amount * PLATFORM_FEES.ppv
+  const creatorAmount = amount - platformFee
+  const appUrl = env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const webhookUrl = getWebhookBaseUrl()
+
+  const [payment] = await db
+    .insert(payments)
+    .values({
+      userId,
+      recipientId: post.creatorId,
+      type: 'ppv',
+      amount: post.ppvPrice,
+      platformFee: String(platformFee),
+      creatorAmount: String(creatorAmount),
+      paymentProvider: 'mercadopago',
+      status: 'pending',
+      metadata: { postId, paymentMethod },
+    })
+    .returning()
+
+  const description = post.contentText
+    ? `PPV: ${post.contentText.slice(0, 60)}${post.contentText.length > 60 ? '...' : ''}`
+    : 'Conteudo PPV - FanDreams'
+
+  const preference = await mpFetch<MpPreference>('/checkout/preferences', {
+    method: 'POST',
+    body: JSON.stringify({
+      items: [
+        {
+          title: description,
+          description: 'Desbloqueio de conteudo exclusivo - FanDreams',
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: amount,
+        },
+      ],
+      external_reference: payment.id,
+      payment_methods: {
+        excluded_payment_types: paymentMethod === 'pix' ? [{ id: 'credit_card' }] : [],
+        installments: paymentMethod === 'credit_card' ? 12 : 1,
+      },
+      back_urls: {
+        success: `${appUrl}/feed?ppv=success&postId=${postId}`,
+        failure: `${appUrl}/feed?ppv=failure&postId=${postId}`,
+        pending: `${appUrl}/feed?ppv=pending&postId=${postId}`,
+      },
+      auto_return: 'approved',
+      notification_url: `${webhookUrl}/api/v1/payments/webhook/mercadopago`,
+      statement_descriptor: 'FANDREAMS',
+    }),
+  })
+
+  await db
+    .update(payments)
+    .set({ providerTxId: preference.id })
+    .where(eq(payments.id, payment.id))
+
+  return {
+    paymentId: payment.id,
+    checkoutUrl: isMpSandbox() ? preference.sandbox_init_point : preference.init_point,
+    sandbox: isMpSandbox(),
+  }
 }
 
 // ── MercadoPago Subscription (Preapproval) ──
