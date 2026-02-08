@@ -7,13 +7,17 @@ import { PAYOUT_CONFIG } from '@myfans/shared'
 // ── Platform Settings Helpers ──
 
 export async function getSetting<T>(key: string, defaultValue: T): Promise<T> {
-  const [row] = await db
-    .select({ value: platformSettings.value })
-    .from(platformSettings)
-    .where(eq(platformSettings.key, key))
-    .limit(1)
+  try {
+    const [row] = await db
+      .select({ value: platformSettings.value })
+      .from(platformSettings)
+      .where(eq(platformSettings.key, key))
+      .limit(1)
 
-  return row ? (row.value as T) : defaultValue
+    return row ? (row.value as T) : defaultValue
+  } catch {
+    return defaultValue
+  }
 }
 
 export async function setSetting(key: string, value: any, updatedBy: string) {
@@ -407,8 +411,6 @@ export async function getPaymentSettings() {
     'fancoin_to_brl',
   ]
 
-  const rows = await db.select().from(platformSettings)
-
   const settings: Record<string, any> = {
     manual_approval_threshold: PAYOUT_CONFIG.manualApprovalThreshold,
     max_daily_withdrawals: PAYOUT_CONFIG.maxDailyWithdrawals,
@@ -418,10 +420,16 @@ export async function getPaymentSettings() {
     fancoin_to_brl: PAYOUT_CONFIG.fancoinToBrl,
   }
 
-  for (const row of rows) {
-    if (keys.includes(row.key)) {
-      settings[row.key] = row.value
+  try {
+    const rows = await db.select().from(platformSettings)
+    for (const row of rows) {
+      if (keys.includes(row.key)) {
+        settings[row.key] = row.value
+      }
     }
+  } catch {
+    // Table may not exist yet — return defaults
+    console.warn('platform_settings table not available, using defaults')
   }
 
   return settings
@@ -437,10 +445,15 @@ export async function updatePaymentSettings(updates: Record<string, any>, adminI
     'fancoin_to_brl',
   ]
 
-  for (const [key, value] of Object.entries(updates)) {
-    if (allowedKeys.includes(key)) {
-      await setSetting(key, value, adminId)
+  try {
+    for (const [key, value] of Object.entries(updates)) {
+      if (allowedKeys.includes(key)) {
+        await setSetting(key, value, adminId)
+      }
     }
+  } catch (e) {
+    console.warn('Failed to update platform_settings:', e)
+    throw new AppError('SETTINGS_UPDATE_FAILED', 'Tabela platform_settings nao existe. Execute db:push para criar.', 500)
   }
 
   return getPaymentSettings()
