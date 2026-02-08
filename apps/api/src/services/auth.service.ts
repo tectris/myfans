@@ -1,13 +1,13 @@
 import { eq } from 'drizzle-orm'
 import jwt from 'jsonwebtoken'
-import { users, userSettings, fancoinWallets, userGamification } from '@myfans/database'
+import { users, userSettings, fancoinWallets, userGamification } from '@fandreams/database'
 import { db } from '../config/database'
 import { env } from '../config/env'
 import { hashPassword, verifyPassword } from '../utils/password'
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, blacklistRefreshToken, isRefreshTokenBlacklisted } from '../utils/tokens'
 import { sendVerificationEmail, sendPasswordResetEmail } from './email.service'
 import { recordFailedLogin, isAccountLocked, clearLoginAttempts } from '../middleware/rateLimit'
-import type { RegisterInput, LoginInput } from '@myfans/shared'
+import type { RegisterInput, LoginInput } from '@fandreams/shared'
 
 // Separate secrets for different token types (falls back to JWT_SECRET if not set)
 function getEmailVerifySecret(): string {

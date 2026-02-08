@@ -1,5 +1,5 @@
 import { eq, desc, like, or, count } from 'drizzle-orm'
-import { users, posts, creatorProfiles, kycDocuments } from '@myfans/database'
+import { users, posts, creatorProfiles, kycDocuments } from '@fandreams/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
 

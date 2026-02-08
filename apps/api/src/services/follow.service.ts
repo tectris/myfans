@@ -1,5 +1,5 @@
 import { eq, and, sql } from 'drizzle-orm'
-import { follows, users } from '@myfans/database'
+import { follows, users } from '@fandreams/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
 

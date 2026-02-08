@@ -7,7 +7,7 @@ import * as media from '../services/media.service'
 import * as bunny from '../services/bunny.service'
 import * as postService from '../services/post.service'
 import { db } from '../config/database'
-import { users } from '@myfans/database'
+import { users } from '@fandreams/database'
 import { eq } from 'drizzle-orm'
 
 const uploadRoute = new Hono()

@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { FAN_TIERS } from '@myfans/shared'
+import { FAN_TIERS } from '@fandreams/shared'
 
 interface LevelBadgeProps {
   level: number

@@ -1,16 +1,16 @@
 {
-  "name": "myfans",
+  "name": "fandreams",
   "private": true,
   "scripts": {
     "dev": "turbo dev",
-    "build": "pnpm --filter @myfans/api build",
+    "build": "pnpm --filter @fandreams/api build",
     "start": "node apps/api/dist/index.js",
     "build:all": "turbo build",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "db:generate": "turbo db:generate",
     "db:push": "turbo db:push",
-    "db:studio": "pnpm --filter @myfans/database db:studio",
+    "db:studio": "pnpm --filter @fandreams/database db:studio",
     "clean": "turbo clean"
   },
   "devDependencies": {

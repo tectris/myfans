@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { createSubscriptionSchema } from '@myfans/shared'
+import { createSubscriptionSchema } from '@fandreams/shared'
 import { validateBody } from '../middleware/validation'
 import { authMiddleware } from '../middleware/auth'
 import * as subscriptionService from '../services/subscription.service'

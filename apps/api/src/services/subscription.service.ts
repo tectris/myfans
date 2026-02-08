@@ -1,8 +1,8 @@
 import { eq, and, sql } from 'drizzle-orm'
-import { subscriptions, creatorProfiles, subscriptionTiers, payments } from '@myfans/database'
+import { subscriptions, creatorProfiles, subscriptionTiers, payments } from '@fandreams/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
-import { PLATFORM_FEES } from '@myfans/shared'
+import { PLATFORM_FEES } from '@fandreams/shared'
 
 export async function subscribe(fanId: string, creatorId: string, tierId?: string) {
   if (fanId === creatorId) {

@@ -1,8 +1,8 @@
 import { eq, desc, sql } from 'drizzle-orm'
-import { users, creatorProfiles, subscriptionTiers, subscriptions, payments } from '@myfans/database'
+import { users, creatorProfiles, subscriptionTiers, subscriptions, payments } from '@fandreams/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
-import type { CreateTierInput } from '@myfans/shared'
+import type { CreateTierInput } from '@fandreams/shared'
 
 export async function applyAsCreator(
   userId: string,

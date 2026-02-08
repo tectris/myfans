@@ -128,7 +128,7 @@ app.get('/health', (c) => {
 app.get('/.well-known/security.txt', (c) => {
   c.header('Content-Type', 'text/plain')
   return c.text(
-    `Contact: security@myfans.my\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: pt, en\nPolicy: https://myfans.my/security-policy\n`,
+    `Contact: security@fandreams.my\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: pt, en\nPolicy: https://fandreams.my/security-policy\n`,
   )
 })
 
@@ -151,7 +151,7 @@ app.notFound((c) => {
 })
 
 const port = Number(process.env.PORT) || env.PORT
-console.log(`MyFans API v2.4.0 running on 0.0.0.0:${port}`)
+console.log(`FanDreams API v2.4.0 running on 0.0.0.0:${port}`)
 serve({ fetch: app.fetch, port, hostname: '0.0.0.0' })
 
 export default app

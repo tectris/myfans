@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { authMiddleware } from '../middleware/auth'
 import * as gamificationService from '../services/gamification.service'
-import { FANCOIN_PACKAGES, FAN_TIERS, XP_REWARDS } from '@myfans/shared'
+import { FANCOIN_PACKAGES, FAN_TIERS, XP_REWARDS } from '@fandreams/shared'
 import { success } from '../utils/response'
 
 const gamification = new Hono()

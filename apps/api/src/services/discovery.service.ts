@@ -1,5 +1,5 @@
 import { eq, desc, sql, ilike, or, and } from 'drizzle-orm'
-import { users, creatorProfiles, posts } from '@myfans/database'
+import { users, creatorProfiles, posts } from '@fandreams/database'
 import { db } from '../config/database'
 
 export async function discoverCreators(opts: { page?: number; limit?: number; category?: string }) {

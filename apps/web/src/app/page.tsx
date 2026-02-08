@@ -9,7 +9,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-xl">
             <Flame className="w-7 h-7 text-primary" />
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MyFans</span>
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">FanDreams</span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-sm text-muted hover:text-foreground transition-colors px-4 py-2">
@@ -86,7 +86,7 @@ export default function LandingPage() {
       <section className="py-24 border-t border-border/50">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-            Por que os criadores escolhem o <span className="text-primary">MyFans</span>?
+            Por que os criadores escolhem o <span className="text-primary">FanDreams</span>?
           </h2>
           <p className="text-muted text-center mb-16 max-w-2xl mx-auto">
             Inovacoes que nenhum concorrente oferece
@@ -159,7 +159,7 @@ export default function LandingPage() {
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 text-muted font-medium">Recurso</th>
                   <th className="py-3 px-4 text-center">
-                    <span className="text-primary font-bold">MyFans</span>
+                    <span className="text-primary font-bold">FanDreams</span>
                   </th>
                   <th className="py-3 px-4 text-center text-muted">OnlyFans</th>
                   <th className="py-3 px-4 text-center text-muted">Fansly</th>
@@ -175,10 +175,10 @@ export default function LandingPage() {
                   ['Fan Battles', 'Sim', 'Nao', 'Nao'],
                   ['PIX nativo', 'Sim', 'Parcial', 'Nao'],
                   ['AI Chatbot', 'Incluso', 'Terceiros', 'Nao'],
-                ].map(([feature, myfans, of, fansly]) => (
+                ].map(([feature, fandreams, of, fansly]) => (
                   <tr key={feature}>
                     <td className="py-3 px-4 font-medium">{feature}</td>
-                    <td className="py-3 px-4 text-center text-primary font-semibold">{myfans}</td>
+                    <td className="py-3 px-4 text-center text-primary font-semibold">{fandreams}</td>
                     <td className="py-3 px-4 text-center text-muted">{of}</td>
                     <td className="py-3 px-4 text-center text-muted">{fansly}</td>
                   </tr>
@@ -197,7 +197,7 @@ export default function LandingPage() {
             Pronto para ganhar mais com menos taxa?
           </h2>
           <p className="text-lg text-muted mb-8">
-            Junte-se aos criadores que ja faturam mais no MyFans.
+            Junte-se aos criadores que ja faturam mais no FanDreams.
           </p>
           <Link
             href="/register"
@@ -215,7 +215,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-2">
               <Flame className="w-5 h-5 text-primary" />
               <span className="font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                MyFans
+                FanDreams
               </span>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted">
@@ -229,7 +229,7 @@ export default function LandingPage() {
                 Contato
               </Link>
             </div>
-            <p className="text-xs text-muted">2026 MyFans. Todos os direitos reservados.</p>
+            <p className="text-xs text-muted">2026 FanDreams. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>

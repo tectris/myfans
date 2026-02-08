@@ -186,7 +186,7 @@ videoRoute.get('/list', authMiddleware, creatorMiddleware, async (c) => {
 
 /**
  * Webhook endpoint for Bunny encoding status updates
- * Configure in Bunny Dashboard → Stream → Webhooks → URL: https://api.myfans.my/api/v1/video/webhook
+ * Configure in Bunny Dashboard → Stream → Webhooks → URL: https://api.fandreams.my/api/v1/video/webhook
  */
 videoRoute.post('/webhook', async (c) => {
   try {

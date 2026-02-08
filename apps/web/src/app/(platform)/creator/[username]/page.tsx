@@ -224,8 +224,8 @@ export default function CreatorProfilePage() {
   async function handleShare() {
     const url = `${window.location.origin}/creator/${username}`
     const shareData = {
-      title: `${profile?.displayName || username} no MyFans`,
-      text: `Confira o perfil de ${profile?.displayName || username} no MyFans!`,
+      title: `${profile?.displayName || username} no FanDreams`,
+      text: `Confira o perfil de ${profile?.displayName || username} no FanDreams!`,
       url,
     }
 
@@ -244,7 +244,7 @@ export default function CreatorProfilePage() {
 
   function handleShareOption(platform: string) {
     const url = `${window.location.origin}/creator/${username}`
-    const text = `Confira o perfil de ${profile?.displayName || username} no MyFans!`
+    const text = `Confira o perfil de ${profile?.displayName || username} no FanDreams!`
     const encoded = encodeURIComponent(text + ' ' + url)
     const encodedUrl = encodeURIComponent(url)
     const encodedText = encodeURIComponent(text)

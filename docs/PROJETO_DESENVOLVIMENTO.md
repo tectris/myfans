@@ -1,6 +1,6 @@
-# MyFans — Projeto de Desenvolvimento
+# FanDreams — Projeto de Desenvolvimento
 
-> Documento tecnico completo para desenvolvimento da plataforma MyFans.
+> Documento tecnico completo para desenvolvimento da plataforma FanDreams.
 > Stack: Next.js 15 + Vercel + Neon (Postgres) + Railway + Bunny Stream + Cloudflare R2
 > Arquitetura: API-first, mobile-ready, preparada para app nativo futuro.
 
@@ -75,7 +75,7 @@
 ## 2. ESTRUTURA DO MONOREPO
 
 ```
-myfans/
+fandreams/
 +-- apps/
 |   +-- web/                          # Next.js 15 (Vercel)
 |   |   +-- app/
@@ -1319,7 +1319,7 @@ Semana 8: Launch Prep
 # ==========================================
 # DATABASE
 # ==========================================
-DATABASE_URL=postgresql://user:pass@host/myfans?sslmode=require
+DATABASE_URL=postgresql://user:pass@host/fandreams?sslmode=require
 
 # ==========================================
 # REDIS
@@ -1332,7 +1332,7 @@ UPSTASH_REDIS_REST_TOKEN=...
 # ==========================================
 JWT_SECRET=...
 JWT_REFRESH_SECRET=...
-NEXTAUTH_URL=https://myfans.co
+NEXTAUTH_URL=https://fandreams.co
 
 # ==========================================
 # CLOUDFLARE R2
@@ -1340,8 +1340,8 @@ NEXTAUTH_URL=https://myfans.co
 R2_ACCOUNT_ID=...
 R2_ACCESS_KEY_ID=...
 R2_SECRET_ACCESS_KEY=...
-R2_BUCKET_NAME=myfans-media
-R2_PUBLIC_URL=https://media.myfans.co
+R2_BUCKET_NAME=fandreams-media
+R2_PUBLIC_URL=https://media.fandreams.co
 
 # ==========================================
 # BUNNY
@@ -1393,9 +1393,9 @@ NEXT_PUBLIC_POSTHOG_KEY=...
 # APP
 # ==========================================
 NODE_ENV=production
-API_URL=https://api.myfans.co
-NEXT_PUBLIC_API_URL=https://api.myfans.co
-NEXT_PUBLIC_APP_URL=https://myfans.co
+API_URL=https://api.fandreams.co
+NEXT_PUBLIC_API_URL=https://api.fandreams.co
+NEXT_PUBLIC_APP_URL=https://fandreams.co
 PLATFORM_FEE_PERCENT=12
 FANCOIN_RATE=100
 ```
@@ -1425,5 +1425,5 @@ Nomenclatura:
 ---
 
 > Documento gerado em Fevereiro/2026
-> Projeto MyFans — Especificacao Tecnica v1.0
+> Projeto FanDreams — Especificacao Tecnica v1.0
 > Pronto para implementacao.

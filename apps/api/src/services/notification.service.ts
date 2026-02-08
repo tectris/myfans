@@ -1,5 +1,5 @@
 import { eq, and, sql, desc } from 'drizzle-orm'
-import { notifications, users } from '@myfans/database'
+import { notifications, users } from '@fandreams/database'
 import { db } from '../config/database'
 
 export async function createNotification(userId: string, type: string, title: string, body?: string, data?: Record<string, unknown>) {

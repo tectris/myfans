@@ -73,7 +73,7 @@ export function Header() {
             <Link href={isAuthenticated ? '/feed' : '/'} className="flex items-center gap-2 font-bold text-xl">
               <Flame className="w-7 h-7 text-primary" />
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                MyFans
+                FanDreams
               </span>
             </Link>
           </div>

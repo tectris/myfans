@@ -22,7 +22,7 @@ WORKDIR /app/apps/api
 RUN npx tsup
 
 # Verify the bundle is correct
-RUN node -e "const fs=require('fs');const f=fs.readFileSync('dist/index.js','utf8');if(f.includes('@myfans/shared')){console.error('ERROR: bundle still references @myfans/shared');process.exit(1)}else{console.log('OK: workspace packages bundled inline')}"
+RUN node -e "const fs=require('fs');const f=fs.readFileSync('dist/index.js','utf8');if(f.includes('@fandreams/shared')){console.error('ERROR: bundle still references @fandreams/shared');process.exit(1)}else{console.log('OK: workspace packages bundled inline')}"
 RUN node -e "const fs=require('fs');const f=fs.readFileSync('dist/index.js','utf8');if(!f.includes('notifications')){console.error('ERROR: notifications route missing from bundle');process.exit(1)}else{console.log('OK: notifications route present in bundle')}"
 RUN node -e "const fs=require('fs');const f=fs.readFileSync('dist/index.js','utf8');if(!f.includes('2.4.0')){console.error('ERROR: version 2.4.0 not found in bundle');process.exit(1)}else{console.log('OK: version 2.4.0 present in bundle')}"
 

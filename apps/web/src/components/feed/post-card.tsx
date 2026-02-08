@@ -236,7 +236,7 @@ export function PostCard({
     const url = `${window.location.origin}/creator/${post.creatorUsername}`
     const shareData = {
       title: `Post de ${post.creatorDisplayName || post.creatorUsername}`,
-      text: post.contentText || `Confira este post no MyFans!`,
+      text: post.contentText || `Confira este post no FanDreams!`,
       url,
     }
 
@@ -257,7 +257,7 @@ export function PostCard({
 
   function handleShareOption(platform: string) {
     const url = `${window.location.origin}/creator/${post.creatorUsername}`
-    const text = post.contentText || `Confira este post no MyFans!`
+    const text = post.contentText || `Confira este post no FanDreams!`
     const encoded = encodeURIComponent(text + ' ' + url)
     const encodedUrl = encodeURIComponent(url)
     const encodedText = encodeURIComponent(text)

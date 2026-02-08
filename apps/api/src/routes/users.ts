@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { updateProfileSchema, updateSettingsSchema } from '@myfans/shared'
+import { updateProfileSchema, updateSettingsSchema } from '@fandreams/shared'
 import { validateBody } from '../middleware/validation'
 import { authMiddleware } from '../middleware/auth'
 import * as userService from '../services/user.service'

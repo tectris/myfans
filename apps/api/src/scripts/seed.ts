@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
-import { badges, dailyMissions } from '@myfans/database'
+import { badges, dailyMissions } from '@fandreams/database'
 
 if (!process.env.DATABASE_URL) {
   console.error('DATABASE_URL is not set.')

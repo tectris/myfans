@@ -1,4 +1,4 @@
-# MyFans Platform — Relatório Consolidado de Segurança
+# FanDreams Platform — Relatório Consolidado de Segurança
 
 **Data:** 2026-02-08
 **Classificação:** CONFIDENCIAL
@@ -11,7 +11,7 @@
 ```
 ╔══════════════════════════════════════════════════════════════════╗
 ║                                                                  ║
-║           NOTA DE CONFIANÇA DA PLATAFORMA MYFANS                 ║
+║           NOTA DE CONFIANÇA DA PLATAFORMA FANDREAMS                 ║
 ║                                                                  ║
 ║               ANTES DAS CORREÇÕES:                               ║
 ║                     ████████████░░░░░░░░                         ║
@@ -67,7 +67,7 @@
 
 | Métrica | Valor |
 |---|---|
-| Target | `https://api.myfans.my` |
+| Target | `https://api.fandreams.my` |
 | Proxy/CDN | **Cloudflare** (detectado via Server header) |
 | Total de testes executados | 27 |
 | Testes aprovados | 19 (70.4%) |
@@ -297,7 +297,7 @@ Estes aspectos foram **validados tanto internamente quanto externamente** como a
 90-100 [A]   ██████████████████░░  EXCELENTE — Produção segura       ← AGORA (93)
 ```
 
-**A plataforma MyFans com score 93/100 (Grade A) está PRONTA PARA PRODUÇÃO.**
+**A plataforma FanDreams com score 93/100 (Grade A) está PRONTA PARA PRODUÇÃO.**
 
 ### Histórico de evolução:
 
