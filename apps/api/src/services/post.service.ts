@@ -292,9 +292,10 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
   const offset = (page - 1) * limit
   const isOwner = viewerId === creatorId
 
+  // For non-owners: show all visible, non-archived posts (public + protected)
+  // Protected posts will be returned with hasAccess: false and restricted media
   const conditions = [eq(posts.creatorId, creatorId), eq(posts.isArchived, false)]
   if (!isOwner) {
-    conditions.push(eq(posts.visibility, 'public'))
     conditions.push(eq(posts.isVisible, true))
   }
 
@@ -329,6 +330,23 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
     postIds.length > 0
       ? await db.select().from(postMedia).where(inArray(postMedia.postId, postIds)).orderBy(postMedia.sortOrder)
       : []
+
+  // Check subscription status for non-owner viewers
+  let hasSubscription = false
+  if (viewerId && !isOwner) {
+    const [sub] = await db
+      .select()
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.fanId, viewerId),
+          eq(subscriptions.creatorId, creatorId),
+          eq(subscriptions.status, 'active'),
+        ),
+      )
+      .limit(1)
+    hasSubscription = !!sub
+  }
 
   let likedPostIds = new Set<string>()
   let bookmarkedPostIds = new Set<string>()
@@ -372,13 +390,23 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
     }
   }
 
-  const postsWithMedia = feedPosts.map((post) => ({
-    ...post,
-    media: allMedia.filter((m) => m.postId === post.id),
-    isLiked: likedPostIds.has(post.id),
-    isBookmarked: bookmarkedPostIds.has(post.id),
-    tipSent: tipsByPostId.get(post.id) || null,
-  }))
+  const postsWithMedia = feedPosts.map((post) => {
+    const postIsPublic = post.visibility === 'public'
+    const hasAccess = isOwner || postIsPublic || hasSubscription
+    const postMedia = allMedia.filter((m) => m.postId === post.id)
+
+    return {
+      ...post,
+      // For locked posts: only show preview media, null out full storageKeys
+      media: hasAccess
+        ? postMedia
+        : postMedia.map((m) => ({ ...m, storageKey: m.isPreview ? m.storageKey : null })),
+      hasAccess,
+      isLiked: likedPostIds.has(post.id),
+      isBookmarked: bookmarkedPostIds.has(post.id),
+      tipSent: tipsByPostId.get(post.id) || null,
+    }
+  })
 
   return { posts: postsWithMedia, total: feedPosts.length }
 }
