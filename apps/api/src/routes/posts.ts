@@ -28,6 +28,13 @@ postsRoute.post('/', authMiddleware, creatorMiddleware, validateBody(createPostS
   }
 })
 
+// Debug: check raw post counts by visibility for a creator
+postsRoute.get('/creator/:creatorId/debug', async (c) => {
+  const creatorId = c.req.param('creatorId')
+  const result = await postService.getCreatorPostsDebug(creatorId)
+  return success(c, result)
+})
+
 postsRoute.get('/creator/:creatorId', async (c) => {
   try {
     const creatorId = c.req.param('creatorId')
