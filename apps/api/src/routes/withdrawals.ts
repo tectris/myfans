@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
-import { authMiddleware } from '../middleware/auth'
-import { adminMiddleware } from '../middleware/admin'
+import { authMiddleware, adminMiddleware } from '../middleware/auth'
 import { sensitiveRateLimit } from '../middleware/rateLimit'
 import * as withdrawalService from '../services/withdrawal.service'
 import { success, error } from '../utils/response'

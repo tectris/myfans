@@ -16,6 +16,128 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
+const KNOWN_GATEWAYS = [
+  { id: 'mercadopago', label: 'MercadoPago', description: 'PIX e Cartao de Credito', envVars: 'MERCADOPAGO_ACCESS_TOKEN, MERCADOPAGO_SANDBOX' },
+  { id: 'nowpayments', label: 'NOWPayments', description: 'Bitcoin, USDT, ETH e outras criptos', envVars: 'NOWPAYMENTS_API_KEY, NOWPAYMENTS_IPN_SECRET, NOWPAYMENTS_SANDBOX' },
+  { id: 'paypal', label: 'PayPal', description: 'Pagamentos via PayPal', envVars: 'PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_SANDBOX' },
+]
+
+const DEFAULT_SETTINGS = {
+  manual_approval_threshold: 500,
+  max_daily_withdrawals: 3,
+  max_daily_amount: 10000,
+  cooldown_hours: 24,
+  min_payout: 50,
+  fancoin_to_brl: 0.01,
+}
+
+function SettingsTab({ providers, loadingProviders, settings, loadingSettings, settingsMutation }: {
+  providers: any
+  loadingProviders: boolean
+  settings: any
+  loadingSettings: boolean
+  settingsMutation: any
+}) {
+  const activeProviderIds = new Set((providers || []).map((p: any) => p.id))
+  const effectiveSettings = settings || DEFAULT_SETTINGS
+
+  return (
+    <div className="space-y-6">
+      {/* Payment Gateways Status */}
+      <Card>
+        <CardHeader>
+          <h2 className="font-bold flex items-center gap-2">
+            <Settings className="w-5 h-5 text-primary" /> Payment Gateways
+          </h2>
+          <p className="text-xs text-muted mt-1">Status dos gateways de pagamento configurados no servidor</p>
+        </CardHeader>
+        <CardContent>
+          {loadingProviders ? (
+            <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+          ) : (
+            <div className="space-y-3">
+              {KNOWN_GATEWAYS.map((gw) => {
+                const active = activeProviderIds.has(gw.id)
+                const providerData = (providers || []).find((p: any) => p.id === gw.id)
+                return (
+                  <div key={gw.id} className={`flex items-center justify-between p-3 border rounded-md ${active ? 'border-border' : 'border-border/50 opacity-60'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full ${active ? (providerData?.sandbox ? 'bg-yellow-500' : 'bg-green-500') : 'bg-gray-500'}`} />
+                      <div>
+                        <p className="font-medium">{gw.label}</p>
+                        <p className="text-xs text-muted">{gw.description}</p>
+                        {!active && (
+                          <p className="text-xs text-muted mt-1 font-mono">{gw.envVars}</p>
+                        )}
+                        {active && providerData?.methods && (
+                          <p className="text-xs text-muted mt-1">Metodos: {providerData.methods.join(', ')}</p>
+                        )}
+                      </div>
+                    </div>
+                    {active ? (
+                      <Badge variant={providerData?.sandbox ? 'warning' : 'success'}>
+                        {providerData?.sandbox ? 'Sandbox' : 'Producao'}
+                      </Badge>
+                    ) : (
+                      <Badge variant="default">Nao configurado</Badge>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Anti-fraud & Withdrawal Settings */}
+      <Card>
+        <CardHeader>
+          <h2 className="font-bold flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" /> Configuracoes de Anti-Fraude e Saques
+          </h2>
+          <p className="text-xs text-muted mt-1">Controles de seguranca e limites para saques de criadores</p>
+        </CardHeader>
+        <CardContent>
+          {loadingSettings ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          ) : (
+            <form className="space-y-4" onSubmit={(e) => {
+              e.preventDefault()
+              const form = new FormData(e.currentTarget)
+              settingsMutation.mutate({
+                manual_approval_threshold: Number(form.get('manual_approval_threshold')),
+                max_daily_withdrawals: Number(form.get('max_daily_withdrawals')),
+                max_daily_amount: Number(form.get('max_daily_amount')),
+                cooldown_hours: Number(form.get('cooldown_hours')),
+                min_payout: Number(form.get('min_payout')),
+                fancoin_to_brl: Number(form.get('fancoin_to_brl')),
+              })
+            }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input label="Aprovacao manual a partir de (R$)" name="manual_approval_threshold" type="number" step="0.01" defaultValue={effectiveSettings.manual_approval_threshold} />
+                <Input label="Saque minimo (R$)" name="min_payout" type="number" step="0.01" defaultValue={effectiveSettings.min_payout} />
+                <Input label="Max saques por dia" name="max_daily_withdrawals" type="number" defaultValue={effectiveSettings.max_daily_withdrawals} />
+                <Input label="Max valor diario (R$)" name="max_daily_amount" type="number" step="0.01" defaultValue={effectiveSettings.max_daily_amount} />
+                <Input label="Cooldown entre saques (horas)" name="cooldown_hours" type="number" defaultValue={effectiveSettings.cooldown_hours} />
+                <Input label="Taxa FanCoin para BRL" name="fancoin_to_brl" type="number" step="0.001" defaultValue={effectiveSettings.fancoin_to_brl} />
+              </div>
+              {!settings && (
+                <div className="flex items-center gap-2 p-3 bg-warning/10 rounded text-xs text-warning">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  Usando valores padrao. Execute <code className="font-mono bg-surface-light px-1 rounded">db:push</code> para criar a tabela platform_settings.
+                </div>
+              )}
+              <Button type="submit" loading={settingsMutation.isPending}>
+                Salvar Configuracoes
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export default function AdminPaymentsPage() {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
@@ -34,24 +156,34 @@ export default function AdminPaymentsPage() {
     queryKey: ['admin-payouts-pending'],
     queryFn: async () => (await api.get<any>('/withdrawals/admin/pending')).data,
     enabled: activeTab === 'pending',
+    retry: false,
   })
 
   const { data: allPayouts, isLoading: loadingAll } = useQuery({
     queryKey: ['admin-payouts-all', statusFilter],
     queryFn: async () => (await api.get<any>(`/withdrawals/admin/all${statusFilter ? `?status=${statusFilter}` : ''}`)).data,
     enabled: activeTab === 'all',
+    retry: false,
   })
 
   const { data: settings, isLoading: loadingSettings } = useQuery({
     queryKey: ['admin-payment-settings'],
     queryFn: async () => (await api.get<any>('/withdrawals/admin/settings')).data,
     enabled: activeTab === 'settings',
+    retry: false,
   })
 
   const { data: providers, isLoading: loadingProviders } = useQuery({
     queryKey: ['payment-providers'],
-    queryFn: async () => (await api.get<any>('/payments/providers')).data,
+    queryFn: async () => {
+      try {
+        return (await api.get<any>('/payments/providers')).data
+      } catch {
+        return []
+      }
+    },
     enabled: activeTab === 'settings',
+    retry: false,
   })
 
   const approveMutation = useMutation({
@@ -214,87 +346,13 @@ export default function AdminPaymentsPage() {
       )}
 
       {activeTab === 'settings' && (
-        <div className="space-y-6">
-          {/* Payment Gateways Status */}
-          <Card>
-            <CardHeader>
-              <h2 className="font-bold flex items-center gap-2">
-                <Settings className="w-5 h-5 text-primary" /> Payment Gateways
-              </h2>
-            </CardHeader>
-            <CardContent>
-              {loadingProviders ? (
-                <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
-              ) : providers && providers.length > 0 ? (
-                <div className="space-y-3">
-                  {providers.map((p: any) => (
-                    <div key={p.id} className="flex items-center justify-between p-3 border border-border rounded-md">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${p.sandbox ? 'bg-warning' : 'bg-green-500'}`} />
-                        <div>
-                          <p className="font-medium">{p.label}</p>
-                          <p className="text-xs text-muted">Metodos: {p.methods.join(', ')}</p>
-                        </div>
-                      </div>
-                      <Badge variant={p.sandbox ? 'warning' : 'success'}>
-                        {p.sandbox ? 'Sandbox' : 'Producao'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-muted">
-                  <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-warning" />
-                  <p className="text-sm">Nenhum gateway configurado. Configure as variaveis de ambiente:</p>
-                  <div className="mt-2 text-xs text-left bg-surface-light p-3 rounded-md font-mono space-y-1">
-                    <p>MERCADOPAGO_ACCESS_TOKEN, MERCADOPAGO_SANDBOX</p>
-                    <p>NOWPAYMENTS_API_KEY, NOWPAYMENTS_IPN_SECRET, NOWPAYMENTS_SANDBOX</p>
-                    <p>PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_SANDBOX</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Anti-fraud & Withdrawal Settings */}
-          <Card>
-            <CardHeader>
-              <h2 className="font-bold flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" /> Configuracoes de Anti-Fraude e Saques
-              </h2>
-            </CardHeader>
-            <CardContent>
-              {loadingSettings ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-              ) : settings ? (
-                <form className="space-y-4" onSubmit={(e) => {
-                  e.preventDefault()
-                  const form = new FormData(e.currentTarget)
-                  settingsMutation.mutate({
-                    manual_approval_threshold: Number(form.get('manual_approval_threshold')),
-                    max_daily_withdrawals: Number(form.get('max_daily_withdrawals')),
-                    max_daily_amount: Number(form.get('max_daily_amount')),
-                    cooldown_hours: Number(form.get('cooldown_hours')),
-                    min_payout: Number(form.get('min_payout')),
-                    fancoin_to_brl: Number(form.get('fancoin_to_brl')),
-                  })
-                }}>
-                  <Input label="Aprovacao manual a partir de (R$)" name="manual_approval_threshold" type="number" step="0.01" defaultValue={settings.manual_approval_threshold} />
-                  <Input label="Max saques por dia" name="max_daily_withdrawals" type="number" defaultValue={settings.max_daily_withdrawals} />
-                  <Input label="Max valor diario (R$)" name="max_daily_amount" type="number" step="0.01" defaultValue={settings.max_daily_amount} />
-                  <Input label="Cooldown entre saques (horas)" name="cooldown_hours" type="number" defaultValue={settings.cooldown_hours} />
-                  <Input label="Saque minimo (R$)" name="min_payout" type="number" step="0.01" defaultValue={settings.min_payout} />
-                  <Input label="Taxa FanCoin → BRL" name="fancoin_to_brl" type="number" step="0.001" defaultValue={settings.fancoin_to_brl} />
-                  <Button type="submit" loading={settingsMutation.isPending}>
-                    Salvar Configuracoes
-                  </Button>
-                </form>
-              ) : (
-                <p className="text-sm text-muted text-center py-4">Erro ao carregar configuracoes. Verifique se a tabela platform_settings existe no banco.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <SettingsTab
+          providers={providers}
+          loadingProviders={loadingProviders}
+          settings={settings}
+          loadingSettings={loadingSettings}
+          settingsMutation={settingsMutation}
+        />
       )}
     </div>
   )
