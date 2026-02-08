@@ -13,6 +13,24 @@ export const PAYOUT_CONFIG = {
   payoutDays: [1, 15],
   pixProcessingTime: 'instant',
   bankTransferProcessingTime: '1-3 business days',
+  cryptoProcessingTime: '10-30 minutes',
+  manualApprovalThreshold: 500.0,
+  cooldownHours: 24,
+  maxDailyWithdrawals: 3,
+  maxDailyAmount: 10000.0,
+  fancoinToBrl: 0.01,
+} as const
+
+export const PAYMENT_PROVIDERS = {
+  mercadopago: { label: 'MercadoPago', methods: ['pix', 'credit_card'] as const },
+  nowpayments: { label: 'Crypto', methods: ['crypto'] as const },
+  paypal: { label: 'PayPal', methods: ['paypal'] as const },
+} as const
+
+export const WITHDRAWAL_METHODS = {
+  pix: { label: 'PIX', minAmount: 10.0, processingTime: 'Instantaneo' },
+  bank_transfer: { label: 'Transferencia Bancaria', minAmount: 50.0, processingTime: '1-3 dias uteis' },
+  crypto: { label: 'Crypto (USDT)', minAmount: 20.0, processingTime: '10-30 minutos' },
 } as const
 
 export const SUBSCRIPTION_LIMITS = {

@@ -21,6 +21,7 @@ import media from './routes/media'
 import kyc from './routes/kyc'
 import admin from './routes/admin'
 import paymentsRoute from './routes/payments'
+import withdrawals from './routes/withdrawals'
 import notificationsRoute from './routes/notifications'
 
 const app = new Hono().basePath('/api/v1')
@@ -95,6 +96,7 @@ app.route('/media', media)
 app.route('/kyc', kyc)
 app.route('/admin', admin)
 app.route('/payments', paymentsRoute)
+app.route('/withdrawals', withdrawals)
 app.route('/notifications', notificationsRoute)
 
 app.get('/health', (c) => c.json({ status: 'ok', version: '2.4.0', timestamp: new Date().toISOString() }))
