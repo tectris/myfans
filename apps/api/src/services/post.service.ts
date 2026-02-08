@@ -273,16 +273,22 @@ export async function getFeed(userId: string, page = 1, limit = 20) {
     }
   }
 
+  const subscribedCreatorIds = new Set(creatorIds)
+
   const postsWithMedia = feedPosts.map((post) => {
-    let hasAccess = post.visibility === 'public' || post.creatorId === userId
+    const isOwn = post.creatorId === userId
+    const isSubscribed = subscribedCreatorIds.has(post.creatorId)
+    const isPublic = post.visibility === 'public'
+    let hasAccess = isOwn || isSubscribed || isPublic
     if (!hasAccess && post.visibility === 'ppv') {
       hasAccess = ppvUnlockedIds.has(post.id)
-    } else if (!hasAccess) {
-      hasAccess = creatorIds.includes(post.creatorId)
     }
+    const postMedia = allMedia.filter((m) => m.postId === post.id)
     return {
       ...post,
-      media: allMedia.filter((m) => m.postId === post.id),
+      media: hasAccess
+        ? postMedia
+        : postMedia.map((m) => ({ ...m, storageKey: m.isPreview ? m.storageKey : null })),
       hasAccess,
       isLiked: likedPostIds.has(post.id),
       isBookmarked: bookmarkedPostIds.has(post.id),
@@ -328,6 +334,7 @@ export async function getPublicFeed(page = 1, limit = 20) {
   const postsWithMedia = feedPosts.map((post) => ({
     ...post,
     media: allMedia.filter((m) => m.postId === post.id),
+    hasAccess: true,
   }))
 
   return { posts: postsWithMedia, total: feedPosts.length }
@@ -337,17 +344,8 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
   const offset = (page - 1) * limit
   const isOwner = viewerId === creatorId
 
-  // Check if viewer is a subscriber
-  let isSubscriber = false
-  if (viewerId && !isOwner) {
-    const [sub] = await db
-      .select({ id: subscriptions.id })
-      .from(subscriptions)
-      .where(and(eq(subscriptions.fanId, viewerId), eq(subscriptions.creatorId, creatorId), eq(subscriptions.status, 'active')))
-      .limit(1)
-    isSubscriber = !!sub
-  }
-
+  // For non-owners: show all visible, non-archived posts (public + protected)
+  // Protected posts will be returned with hasAccess: false and restricted media
   const conditions = [eq(posts.creatorId, creatorId), eq(posts.isArchived, false)]
   if (!isOwner) {
     conditions.push(eq(posts.isVisible, true))
@@ -386,6 +384,23 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
     postIds.length > 0
       ? await db.select().from(postMedia).where(inArray(postMedia.postId, postIds)).orderBy(postMedia.sortOrder)
       : []
+
+  // Check subscription status for non-owner viewers
+  let hasSubscription = false
+  if (viewerId && !isOwner) {
+    const [sub] = await db
+      .select()
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.fanId, viewerId),
+          eq(subscriptions.creatorId, creatorId),
+          eq(subscriptions.status, 'active'),
+        ),
+      )
+      .limit(1)
+    hasSubscription = !!sub
+  }
 
   let likedPostIds = new Set<string>()
   let bookmarkedPostIds = new Set<string>()
@@ -450,15 +465,19 @@ export async function getCreatorPosts(creatorId: string, viewerId?: string, page
   }
 
   const postsWithMedia = feedPosts.map((post) => {
-    let hasAccess = post.visibility === 'public' || isOwner
+    const postIsPublic = post.visibility === 'public'
+    let hasAccess = isOwner || postIsPublic || hasSubscription
     if (!hasAccess && post.visibility === 'ppv') {
       hasAccess = ppvUnlockedIds.has(post.id)
-    } else if (!hasAccess) {
-      hasAccess = isSubscriber
     }
+    const postMedia = allMedia.filter((m) => m.postId === post.id)
+
     return {
       ...post,
-      media: allMedia.filter((m) => m.postId === post.id),
+      // For locked posts: only show preview media, null out full storageKeys
+      media: hasAccess
+        ? postMedia
+        : postMedia.map((m) => ({ ...m, storageKey: m.isPreview ? m.storageKey : null })),
       hasAccess,
       isLiked: likedPostIds.has(post.id),
       isBookmarked: bookmarkedPostIds.has(post.id),

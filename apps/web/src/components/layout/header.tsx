@@ -3,13 +3,12 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import { useAuthStore } from '@/lib/store'
+import { useAuthStore, useThemeStore } from '@/lib/store'
 import { api } from '@/lib/api'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { FancoinDrawer } from '@/components/fancoins/fancoin-drawer'
 import { Search, Bell, MessageCircle, Flame, Coins, X, Sun, Moon } from 'lucide-react'
-import { useThemeStore } from '@/lib/store'
 
 function useDebounce(value: string, delay: number) {
   const [debounced, setDebounced] = useState(value)
@@ -159,7 +158,7 @@ export function Header() {
               className="p-2 rounded-full hover:bg-surface-light transition-colors text-muted hover:text-foreground"
               title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
             >
-              {theme === 'dark' ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             {isAuthenticated ? (
               <>
@@ -176,13 +175,13 @@ export function Header() {
                   href="/messages"
                   className="p-2 rounded-full hover:bg-surface-light transition-colors relative"
                 >
-                  <MessageCircle className="w-4.5 h-4.5 text-muted" />
+                  <MessageCircle className="w-5 h-5 text-muted" />
                 </Link>
                 <Link
                   href="/notifications"
                   className="p-2 rounded-full hover:bg-surface-light transition-colors relative"
                 >
-                  <Bell className="w-4.5 h-4.5 text-muted" />
+                  <Bell className="w-5 h-5 text-muted" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] flex items-center justify-center px-1 text-[9px] font-bold bg-error text-white rounded-full">
                       {unreadCount > 99 ? '99+' : unreadCount}

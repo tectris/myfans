@@ -312,6 +312,12 @@ export function PostCard({
         {post.visibility === 'ppv' && post.ppvPrice && (
           <Badge variant="warning">{formatCurrency(post.ppvPrice)}</Badge>
         )}
+        {post.visibility === 'subscribers' && isLocked && (
+          <Badge variant="primary">
+            <Lock className="w-3 h-3 mr-1 inline" />
+            Assinantes
+          </Badge>
+        )}
 
         {/* More menu */}
         <div className="relative">
@@ -420,6 +426,17 @@ export function PostCard({
         </div>
       </div>
 
+      {/* Locked content banner for text-only locked posts */}
+      {isLocked && !hasMedia && (
+        <div className="mx-5 mb-3 py-4 rounded-md bg-surface-dark flex flex-col items-center justify-center gap-2">
+          <Lock className="w-6 h-6 text-primary" />
+          <p className="text-sm font-medium">Conteudo exclusivo para assinantes</p>
+          <Link href={`/creator/${post.creatorUsername}`}>
+            <Button size="sm">Assinar para desbloquear</Button>
+          </Link>
+        </div>
+      )}
+
       {/* Content */}
       {editing ? (
         <div className="px-4 pb-3">
@@ -450,7 +467,13 @@ export function PostCard({
       ) : (
         post.contentText && (
           <div className="px-4 pb-3">
-            <p className="text-sm whitespace-pre-wrap">{post.contentText}</p>
+            {isLocked ? (
+              <p className="text-sm text-muted italic">
+                {post.contentText.slice(0, 60)}{post.contentText.length > 60 ? '...' : ''}
+              </p>
+            ) : (
+              <p className="text-sm whitespace-pre-wrap">{post.contentText}</p>
+            )}
           </div>
         )
       )}
