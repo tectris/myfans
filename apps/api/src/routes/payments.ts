@@ -8,11 +8,17 @@ import crypto from 'crypto'
 
 const paymentsRoute = new Hono()
 
-// Create a FanCoin purchase checkout
+// Get available payment providers
+paymentsRoute.get('/providers', async (c) => {
+  const providers = paymentService.getAvailableProviders()
+  return success(c, providers)
+})
+
+// Create a FanCoin purchase checkout (multi-provider)
 paymentsRoute.post('/checkout/fancoins', authMiddleware, async (c) => {
   try {
     const { userId } = c.get('user')
-    const { packageId, paymentMethod } = await c.req.json()
+    const { packageId, paymentMethod, provider } = await c.req.json()
 
     if (!packageId) {
       return error(c, 400, 'MISSING_PACKAGE', 'Package ID obrigatorio')
@@ -22,6 +28,7 @@ paymentsRoute.post('/checkout/fancoins', authMiddleware, async (c) => {
       userId,
       packageId,
       paymentMethod || 'pix',
+      provider || 'mercadopago',
     )
     return success(c, result)
   } catch (e) {
@@ -43,8 +50,25 @@ paymentsRoute.get('/status/:id', authMiddleware, async (c) => {
   }
 })
 
-// MercadoPago webhook (no auth - called by MercadoPago)
-paymentsRoute.post('/webhook', async (c) => {
+// PayPal capture (called when user returns from PayPal)
+paymentsRoute.post('/paypal/capture', authMiddleware, async (c) => {
+  try {
+    const { orderId, paymentId } = await c.req.json()
+    if (!orderId || !paymentId) {
+      return error(c, 400, 'MISSING_DATA', 'orderId e paymentId obrigatorios')
+    }
+    const result = await paymentService.capturePaypalOrder(orderId, paymentId)
+    return success(c, result)
+  } catch (e) {
+    if (e instanceof AppError) return error(c, e.status as any, e.code, e.message)
+    throw e
+  }
+})
+
+// ── Webhooks (no auth) ──
+
+// MercadoPago webhook
+paymentsRoute.post('/webhook/mercadopago', async (c) => {
   try {
     const isProduction = env.NODE_ENV === 'production'
 
@@ -55,11 +79,10 @@ paymentsRoute.post('/webhook', async (c) => {
 
       if (!signature || !requestId) {
         if (isProduction) {
-          console.warn('Webhook: missing signature headers in production — rejecting')
+          console.warn('MP Webhook: missing signature headers in production — rejecting')
           return c.json({ received: true, error: 'missing_signature' }, 200)
         }
       } else {
-        // MercadoPago signature validation
         const parts = signature.split(',')
         const tsRaw = parts.find((p) => p.trim().startsWith('ts='))
         const hashRaw = parts.find((p) => p.trim().startsWith('v1='))
@@ -78,11 +101,11 @@ paymentsRoute.post('/webhook', async (c) => {
             .digest('hex')
 
           if (computed !== hash) {
-            console.warn('Webhook: invalid signature — rejecting')
+            console.warn('MP Webhook: invalid signature — rejecting')
             return c.json({ received: true, error: 'invalid_signature' }, 200)
           }
 
-          const result = await paymentService.handleWebhook(bodyJson.type, String(dataId))
+          const result = await paymentService.handleMercadoPagoWebhook(bodyJson.type, String(dataId))
           return c.json({ received: true, ...result }, 200)
         } else if (isProduction) {
           console.warn('Webhook: malformed signature in production — rejecting')
@@ -100,14 +123,69 @@ paymentsRoute.post('/webhook', async (c) => {
     const type = body?.type || body?.action
 
     if (dataId) {
-      const result = await paymentService.handleWebhook(type, String(dataId))
+      const result = await paymentService.handleMercadoPagoWebhook(type, String(dataId))
       return c.json({ received: true, ...result }, 200)
     }
 
     return c.json({ received: true }, 200)
   } catch (err) {
-    console.error('Webhook error:', err)
+    console.error('MP Webhook error:', err)
     return c.json({ received: true, error: 'processing_error' }, 200)
+  }
+})
+
+// Legacy webhook path (backwards compatibility)
+paymentsRoute.post('/webhook', async (c) => {
+  try {
+    const body = await c.req.json()
+    const dataId = body?.data?.id
+    const type = body?.type || body?.action
+    if (dataId) {
+      const result = await paymentService.handleMercadoPagoWebhook(type, String(dataId))
+      return c.json({ received: true, ...result }, 200)
+    }
+    return c.json({ received: true }, 200)
+  } catch (err) {
+    console.error('Legacy webhook error:', err)
+    return c.json({ received: true }, 200)
+  }
+})
+
+// NOWPayments IPN webhook
+paymentsRoute.post('/webhook/nowpayments', async (c) => {
+  try {
+    const body = await c.req.json()
+
+    // Verify IPN signature if secret is configured
+    if (env.NOWPAYMENTS_IPN_SECRET) {
+      const sig = c.req.header('x-nowpayments-sig')
+      if (sig) {
+        const sorted = JSON.stringify(body, Object.keys(body).sort())
+        const computed = crypto.createHmac('sha512', env.NOWPAYMENTS_IPN_SECRET).update(sorted).digest('hex')
+        if (computed !== sig) {
+          console.warn('NP Webhook: invalid signature')
+          return c.json({ received: true }, 200)
+        }
+      }
+    }
+
+    const result = await paymentService.handleNowPaymentsWebhook(body)
+    return c.json({ received: true, ...result }, 200)
+  } catch (err) {
+    console.error('NP Webhook error:', err)
+    return c.json({ received: true }, 200)
+  }
+})
+
+// PayPal webhook
+paymentsRoute.post('/webhook/paypal', async (c) => {
+  try {
+    const body = await c.req.json()
+    const result = await paymentService.handlePaypalWebhook(body)
+    return c.json({ received: true, ...result }, 200)
+  } catch (err) {
+    console.error('PP Webhook error:', err)
+    return c.json({ received: true }, 200)
   }
 })
 

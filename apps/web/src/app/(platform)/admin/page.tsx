@@ -5,7 +5,7 @@ import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Shield, Users, FileText, Star, UserCheck } from 'lucide-react'
+import { Shield, Users, FileText, Star, UserCheck, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/store'
 import { useRouter } from 'next/navigation'
@@ -136,6 +136,21 @@ export default function AdminDashboardPage() {
                 <div>
                   <p className="font-medium">Verificacao KYC</p>
                   <p className="text-xs text-muted">Revisar documentos de identidade</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/payments">
+          <Card className="hover:border-secondary/50 transition-colors cursor-pointer">
+            <CardContent className="pt-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-secondary/10 rounded-sm">
+                  <DollarSign className="w-5 h-5 text-secondary" />
+                </div>
+                <div>
+                  <p className="font-medium">Gestao de Pagamentos</p>
+                  <p className="text-xs text-muted">Saques, aprovacoes e configuracoes</p>
                 </div>
               </div>
             </CardContent>
