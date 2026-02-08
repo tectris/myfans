@@ -70,11 +70,19 @@ paymentsRoute.post('/paypal/capture', authMiddleware, async (c) => {
 // MercadoPago webhook
 paymentsRoute.post('/webhook/mercadopago', async (c) => {
   try {
+    const isProduction = env.NODE_ENV === 'production'
+
+    // In production, signature verification is MANDATORY
     if (env.MERCADOPAGO_WEBHOOK_SECRET) {
       const signature = c.req.header('x-signature')
       const requestId = c.req.header('x-request-id')
 
-      if (signature && requestId) {
+      if (!signature || !requestId) {
+        if (isProduction) {
+          console.warn('MP Webhook: missing signature headers in production — rejecting')
+          return c.json({ received: true, error: 'missing_signature' }, 200)
+        }
+      } else {
         const parts = signature.split(',')
         const tsRaw = parts.find((p) => p.trim().startsWith('ts='))
         const hashRaw = parts.find((p) => p.trim().startsWith('v1='))
@@ -93,16 +101,23 @@ paymentsRoute.post('/webhook/mercadopago', async (c) => {
             .digest('hex')
 
           if (computed !== hash) {
-            console.warn('MP Webhook: invalid signature')
-            return c.json({ received: true }, 200)
+            console.warn('MP Webhook: invalid signature — rejecting')
+            return c.json({ received: true, error: 'invalid_signature' }, 200)
           }
 
           const result = await paymentService.handleMercadoPagoWebhook(bodyJson.type, String(dataId))
           return c.json({ received: true, ...result }, 200)
+        } else if (isProduction) {
+          console.warn('Webhook: malformed signature in production — rejecting')
+          return c.json({ received: true, error: 'malformed_signature' }, 200)
         }
       }
+    } else if (isProduction) {
+      console.error('Webhook: MERCADOPAGO_WEBHOOK_SECRET not set in production!')
+      return c.json({ received: true, error: 'not_configured' }, 200)
     }
 
+    // Without signature verification (dev/testing only)
     const body = await c.req.json()
     const dataId = body?.data?.id
     const type = body?.type || body?.action

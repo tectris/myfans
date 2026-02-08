@@ -40,8 +40,15 @@ usersRoute.patch('/me/password', authMiddleware, async (c) => {
     if (!currentPassword || !newPassword) {
       return error(c, 400, 'MISSING_FIELDS', 'Senha atual e nova senha obrigatorias')
     }
-    if (newPassword.length < 6) {
-      return error(c, 400, 'WEAK_PASSWORD', 'Nova senha deve ter pelo menos 6 caracteres')
+    // Enforce same password policy as registration
+    if (newPassword.length < 8) {
+      return error(c, 400, 'WEAK_PASSWORD', 'Nova senha deve ter pelo menos 8 caracteres')
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      return error(c, 400, 'WEAK_PASSWORD', 'Nova senha deve conter pelo menos uma letra maiuscula')
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      return error(c, 400, 'WEAK_PASSWORD', 'Nova senha deve conter pelo menos um numero')
     }
     const result = await userService.changePassword(userId, currentPassword, newPassword)
     return success(c, result)

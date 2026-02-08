@@ -4,9 +4,19 @@ import { users, userSettings, fancoinWallets, userGamification } from '@myfans/d
 import { db } from '../config/database'
 import { env } from '../config/env'
 import { hashPassword, verifyPassword } from '../utils/password'
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/tokens'
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken, blacklistRefreshToken, isRefreshTokenBlacklisted } from '../utils/tokens'
 import { sendVerificationEmail, sendPasswordResetEmail } from './email.service'
+import { recordFailedLogin, isAccountLocked, clearLoginAttempts } from '../middleware/rateLimit'
 import type { RegisterInput, LoginInput } from '@myfans/shared'
+
+// Separate secrets for different token types (falls back to JWT_SECRET if not set)
+function getEmailVerifySecret(): string {
+  return env.EMAIL_VERIFY_SECRET || `${env.JWT_SECRET}:email_verify`
+}
+
+function getPasswordResetSecret(): string {
+  return env.PASSWORD_RESET_SECRET || `${env.JWT_SECRET}:password_reset`
+}
 
 export async function register(input: RegisterInput) {
   const existing = await db
@@ -108,6 +118,16 @@ export async function register(input: RegisterInput) {
 }
 
 export async function login(input: LoginInput) {
+  // Check account lockout before processing
+  const lockout = isAccountLocked(input.email)
+  if (lockout.locked) {
+    throw new AppError(
+      'ACCOUNT_LOCKED',
+      `Conta temporariamente bloqueada. Tente novamente em ${lockout.retryAfterSeconds} segundos.`,
+      429,
+    )
+  }
+
   let user: any
 
   try {
@@ -140,6 +160,7 @@ export async function login(input: LoginInput) {
   }
 
   if (!user) {
+    recordFailedLogin(input.email)
     throw new AppError('INVALID_CREDENTIALS', 'Email ou senha incorretos', 401)
   }
 
@@ -149,8 +170,12 @@ export async function login(input: LoginInput) {
 
   const valid = await verifyPassword(input.password, user.passwordHash)
   if (!valid) {
+    recordFailedLogin(input.email)
     throw new AppError('INVALID_CREDENTIALS', 'Email ou senha incorretos', 401)
   }
+
+  // Clear lockout on successful login
+  clearLoginAttempts(input.email)
 
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id))
 
@@ -215,6 +240,11 @@ export async function getMe(userId: string) {
 }
 
 export async function refreshTokens(token: string) {
+  // Check if refresh token is blacklisted
+  if (isRefreshTokenBlacklisted(token)) {
+    throw new AppError('INVALID_TOKEN', 'Refresh token invalido', 401)
+  }
+
   const payload = verifyRefreshToken(token)
   if (!payload) {
     throw new AppError('INVALID_TOKEN', 'Refresh token invalido', 401)
@@ -230,21 +260,24 @@ export async function refreshTokens(token: string) {
     throw new AppError('INVALID_TOKEN', 'Usuario nao encontrado', 401)
   }
 
+  // Blacklist old refresh token (rotation)
+  blacklistRefreshToken(token)
+
   const accessToken = generateAccessToken(user.id, user.role)
   const newRefreshToken = generateRefreshToken(user.id)
 
   return { accessToken, refreshToken: newRefreshToken }
 }
 
-// ── Email Verification ──
+// ── Email Verification (uses separate secret) ──
 
 function generateEmailVerifyToken(userId: string, email: string): string {
-  return jwt.sign({ sub: userId, email, type: 'email_verify' }, env.JWT_SECRET, { expiresIn: '24h' })
+  return jwt.sign({ sub: userId, email, type: 'email_verify' }, getEmailVerifySecret(), { expiresIn: '24h' })
 }
 
 function verifyEmailToken(token: string): { sub: string; email: string } | null {
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET) as any
+    const payload = jwt.verify(token, getEmailVerifySecret()) as any
     if (payload.type !== 'email_verify') return null
     return { sub: payload.sub, email: payload.email }
   } catch {
@@ -289,15 +322,15 @@ export async function verifyEmail(token: string) {
   return { verified: true, alreadyVerified: false }
 }
 
-// ── Password Reset ──
+// ── Password Reset (uses separate secret) ──
 
 function generatePasswordResetToken(userId: string): string {
-  return jwt.sign({ sub: userId, type: 'password_reset' }, env.JWT_SECRET, { expiresIn: '1h' })
+  return jwt.sign({ sub: userId, type: 'password_reset' }, getPasswordResetSecret(), { expiresIn: '1h' })
 }
 
 function verifyPasswordResetToken(token: string): { sub: string } | null {
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET) as any
+    const payload = jwt.verify(token, getPasswordResetSecret()) as any
     if (payload.type !== 'password_reset') return null
     return { sub: payload.sub }
   } catch {

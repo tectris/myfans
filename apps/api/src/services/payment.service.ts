@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { payments } from '@myfans/database'
 import { db } from '../config/database'
 import { env } from '../config/env'
@@ -480,7 +480,7 @@ export async function getPaymentStatus(paymentId: string, userId: string) {
       createdAt: payments.createdAt,
     })
     .from(payments)
-    .where(eq(payments.id, paymentId))
+    .where(and(eq(payments.id, paymentId), eq(payments.userId, userId)))
     .limit(1)
 
   if (!payment) throw new AppError('NOT_FOUND', 'Pagamento nao encontrado', 404)

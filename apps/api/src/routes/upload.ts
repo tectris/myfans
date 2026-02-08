@@ -259,10 +259,20 @@ uploadRoute.post('/message', authMiddleware, async (c) => {
   }
 })
 
-// Delete a file
+// Delete a file — ownership verified by checking userId in storage key
 uploadRoute.delete('/:key{.+}', authMiddleware, async (c) => {
   try {
+    const { userId } = c.get('user')
     const key = c.req.param('key')
+
+    // Storage keys follow pattern: {folder}/{userId}/{timestamp}-{filename}
+    // Verify the key belongs to this user to prevent IDOR
+    const keyParts = key.split('/')
+    const ownerSegment = keyParts.length >= 2 ? keyParts[keyParts.length - 2] : null
+    if (ownerSegment !== userId) {
+      return error(c, 403, 'FORBIDDEN', 'Voce nao tem permissao para deletar este arquivo')
+    }
+
     await storage.deleteFile(key)
     return success(c, { deleted: true })
   } catch (e) {

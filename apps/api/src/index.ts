@@ -2,9 +2,11 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { secureHeaders } from 'hono/secure-headers'
+import { bodyLimit } from 'hono/body-limit'
 import { serve } from '@hono/node-server'
 import { env } from './config/env'
 import { apiRateLimit } from './middleware/rateLimit'
+import { auditLog } from './middleware/auditLog'
 
 import auth from './routes/auth'
 import usersRoute from './routes/users'
@@ -59,18 +61,23 @@ function buildAllowedOrigins(): string[] {
 }
 
 const allowedOrigins = buildAllowedOrigins()
-console.log('CORS allowed origins:', allowedOrigins)
+if (env.NODE_ENV !== 'production') {
+  console.log('CORS allowed origins:', allowedOrigins)
+}
 
 app.use('*', logger())
 app.use('*', secureHeaders())
+
+// Body size limit: 1MB for JSON, file uploads handled separately
+app.use('*', bodyLimit({ maxSize: 1024 * 1024 }))
 
 app.use(
   '*',
   cors({
     origin: (origin) => {
       if (allowedOrigins.includes(origin)) return origin
-      console.warn(`CORS: origin "${origin}" not in allowed list`)
-      return allowedOrigins[0]
+      // Reject unknown origins — return undefined to deny CORS
+      return undefined as unknown as string
     },
     credentials: true,
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -78,8 +85,14 @@ app.use(
   }),
 )
 
-// Global rate limit (100 req/min per IP, graceful if Redis unavailable)
+// Global rate limit (100 req/min per IP, with in-memory fallback)
 app.use('*', apiRateLimit)
+
+// Audit log for sensitive actions
+app.use('/auth/*', auditLog)
+app.use('/admin/*', auditLog)
+app.use('/payments/*', auditLog)
+app.use('/users/me/password', auditLog)
 
 app.route('/auth', auth)
 app.route('/users', usersRoute)
@@ -99,7 +112,25 @@ app.route('/payments', paymentsRoute)
 app.route('/withdrawals', withdrawals)
 app.route('/notifications', notificationsRoute)
 
-app.get('/health', (c) => c.json({ status: 'ok', version: '2.4.0', timestamp: new Date().toISOString() }))
+// Health check — hide version in production
+app.get('/health', (c) => {
+  const data: Record<string, string> = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  }
+  if (env.NODE_ENV !== 'production') {
+    data.version = '2.4.0'
+  }
+  return c.json(data)
+})
+
+// Security.txt (RFC 9116)
+app.get('/.well-known/security.txt', (c) => {
+  c.header('Content-Type', 'text/plain')
+  return c.text(
+    `Contact: security@myfans.my\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: pt, en\nPolicy: https://myfans.my/security-policy\n`,
+  )
+})
 
 app.onError((err, c) => {
   console.error('Unhandled error:', err)
@@ -121,7 +152,6 @@ app.notFound((c) => {
 
 const port = Number(process.env.PORT) || env.PORT
 console.log(`MyFans API v2.4.0 running on 0.0.0.0:${port}`)
-console.log('Registered routes: auth, users, creators, posts, subscriptions, fancoins, gamification, discover, feed, upload, video, media, kyc, admin, payments, notifications')
 serve({ fetch: app.fetch, port, hostname: '0.0.0.0' })
 
 export default app

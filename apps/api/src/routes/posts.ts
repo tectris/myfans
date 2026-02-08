@@ -9,6 +9,9 @@ import * as gamificationService from '../services/gamification.service'
 import { success, error } from '../utils/response'
 import { AppError } from '../services/auth.service'
 import { db } from '../config/database'
+import { rateLimit } from '../middleware/rateLimit'
+
+const shareRateLimit = rateLimit({ requests: 10, window: '1 m', prefix: 'share' })
 
 const postsRoute = new Hono()
 
@@ -171,8 +174,8 @@ postsRoute.post('/:id/view', async (c) => {
   }
 })
 
-// Track share (increment shareCount)
-postsRoute.post('/:id/share', async (c) => {
+// Track share (increment shareCount) — rate limited to prevent abuse
+postsRoute.post('/:id/share', shareRateLimit, async (c) => {
   const postId = c.req.param('id')
   try {
     await postService.sharePost(postId)
