@@ -47,14 +47,13 @@ export async function getPublicProfile(username: string) {
   if (!user) throw new AppError('NOT_FOUND', 'Usuario nao encontrado', 404)
 
   let creator = null
-  if (user.role === 'creator') {
-    const [profile] = await db
-      .select()
-      .from(creatorProfiles)
-      .where(eq(creatorProfiles.userId, user.id))
-      .limit(1)
-    creator = profile || null
-  }
+  // Always try to fetch creator profile (admin users can also be creators)
+  const [profile] = await db
+    .select()
+    .from(creatorProfiles)
+    .where(eq(creatorProfiles.userId, user.id))
+    .limit(1)
+  creator = profile || null
 
   const [gamification] = await db
     .select()
