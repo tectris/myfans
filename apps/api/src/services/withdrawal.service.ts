@@ -1,8 +1,8 @@
 import { eq, and, gte, sql, desc, count } from 'drizzle-orm'
-import { payouts, fancoinWallets, fancoinTransactions, platformSettings } from '@myfans/database'
+import { payouts, fancoinWallets, fancoinTransactions, platformSettings } from '@fandreams/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
-import { PAYOUT_CONFIG } from '@myfans/shared'
+import { PAYOUT_CONFIG } from '@fandreams/shared'
 
 // ── Platform Settings Helpers ──
 

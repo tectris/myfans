@@ -1,5 +1,5 @@
 import { eq, desc } from 'drizzle-orm'
-import { users, kycDocuments } from '@myfans/database'
+import { users, kycDocuments } from '@fandreams/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
 

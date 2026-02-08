@@ -1,4 +1,4 @@
-# MyFans Security Testing Suite
+# FanDreams Security Testing Suite
 
 ## Estrutura
 
@@ -7,7 +7,7 @@ security-tests/
 ├── internal/                         # Testes internos (white-box)
 │   └── security-audit.test.ts        # Suite de testes Vitest contra a API Hono
 ├── external/                         # Testes externos (black-box)
-│   ├── myfans_security_scanner.py    # Script Python para ataque externo
+│   ├── fandreams_security_scanner.py    # Script Python para ataque externo
 │   └── requirements.txt              # Dependências Python
 ├── reports/                          # Relatórios
 │   └── SECURITY_AUDIT_REPORT.md      # Relatório de auditoria interna
@@ -19,18 +19,18 @@ security-tests/
 Executa testes diretamente contra o Hono app sem rede:
 
 ```bash
-cd /home/user/myfans
+cd /home/user/fandreams
 npx vitest run security-tests/internal/security-audit.test.ts
 ```
 
 ## Teste Externo (Black-box) — Para CodeSandbox
 
-1. Copie o arquivo `external/myfans_security_scanner.py` para o CodeSandbox
+1. Copie o arquivo `external/fandreams_security_scanner.py` para o CodeSandbox
 2. Instale dependências: `pip install requests`
 3. Execute:
 
 ```bash
-python myfans_security_scanner.py --target https://api.myfans.my --verbose
+python fandreams_security_scanner.py --target https://api.fandreams.app --verbose
 ```
 
 4. Copie o conteúdo de `external_scan_report.json` gerado

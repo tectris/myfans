@@ -1,4 +1,4 @@
-# MyFans — Estudo Estrategico e Analise Critica
+# FanDreams — Estudo Estrategico e Analise Critica
 
 > Plataforma de Creator Economy para competir com OnlyFans, Fansly, Privacy e similares.
 > Foco inicial: Brasil e LATAM. Expansao global planejada.
@@ -7,7 +7,7 @@
 
 ## Sumario Executivo
 
-Este documento apresenta a analise completa de mercado, concorrencia, precificacao, inovacoes tecnologicas e viabilidade para o lancamento da plataforma **MyFans** — uma plataforma de monetizacao para criadores de conteudo com diferenciais em taxa competitiva, gamificacao profunda, economia de tokens e discovery algoritmico.
+Este documento apresenta a analise completa de mercado, concorrencia, precificacao, inovacoes tecnologicas e viabilidade para o lancamento da plataforma **FanDreams** — uma plataforma de monetizacao para criadores de conteudo com diferenciais em taxa competitiva, gamificacao profunda, economia de tokens e discovery algoritmico.
 
 ---
 
@@ -235,7 +235,7 @@ Stripe proibe conteudo adulto explicitamente. Estrategia multi-gateway obrigator
 
 ## 4. ANALISE DO NOME
 
-### MyFans
+### FanDreams
 
 | Criterio | Avaliacao |
 |---|---|
@@ -368,4 +368,4 @@ A oportunidade eh real: mercado de $5.5B no Brasil crescendo 22%/ano, com concor
 ---
 
 > Documento gerado em Fevereiro/2026
-> Projeto MyFans — Analise Estrategica v1.0
+> Projeto FanDreams — Analise Estrategica v1.0

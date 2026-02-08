@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * MYFANS PLATFORM — INTERNAL SECURITY AUDIT TEST SUITE
+ * FANDREAMS PLATFORM — INTERNAL SECURITY AUDIT TEST SUITE
  * ============================================================================
  *
  * Metodologias: OWASP Top 10 2021, OWASP API Security Top 10, MITRE ATT&CK

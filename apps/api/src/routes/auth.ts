@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@myfans/shared'
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@fandreams/shared'
 import { validateBody } from '../middleware/validation'
 import * as authService from '../services/auth.service'
 import { success, error } from '../utils/response'

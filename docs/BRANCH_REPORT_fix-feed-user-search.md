@@ -11,7 +11,7 @@
 
 ## Resumo Executivo
 
-Esta branch concentrou uma grande sprint de features e correções na plataforma MyFans, abrangendo desde infraestrutura de deploy (Docker/Railway) até features de engajamento social (follows, shares, views, notificações). O trabalho foi dividido em múltiplas fases, cada uma construindo sobre a anterior.
+Esta branch concentrou uma grande sprint de features e correções na plataforma FanDreams, abrangendo desde infraestrutura de deploy (Docker/Railway) até features de engajamento social (follows, shares, views, notificações). O trabalho foi dividido em múltiplas fases, cada uma construindo sobre a anterior.
 
 ---
 

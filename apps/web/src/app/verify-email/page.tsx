@@ -46,7 +46,7 @@ function VerifyEmailContent() {
       <div className="mb-8">
         <Link href="/" className="inline-flex items-center gap-2 font-bold text-2xl">
           <Flame className="w-8 h-8 text-primary" />
-          <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MyFans</span>
+          <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">FanDreams</span>
         </Link>
       </div>
 

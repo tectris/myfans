@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { FANCOIN_PACKAGES } from '@myfans/shared'
+import { FANCOIN_PACKAGES } from '@fandreams/shared'
 import { formatCurrency } from '@/lib/utils'
 import {
   Coins, TrendingUp, TrendingDown, ShoppingBag, Gift, CreditCard,

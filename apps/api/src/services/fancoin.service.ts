@@ -1,8 +1,8 @@
 import { eq, sql } from 'drizzle-orm'
-import { fancoinWallets, fancoinTransactions, creatorProfiles, users, posts } from '@myfans/database'
+import { fancoinWallets, fancoinTransactions, creatorProfiles, users, posts } from '@fandreams/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
-import { FANCOIN_PACKAGES, PLATFORM_FEES } from '@myfans/shared'
+import { FANCOIN_PACKAGES, PLATFORM_FEES } from '@fandreams/shared'
 
 export async function getWallet(userId: string) {
   const [wallet] = await db

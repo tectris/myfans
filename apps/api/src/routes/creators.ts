@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { createTierSchema } from '@myfans/shared'
+import { createTierSchema } from '@fandreams/shared'
 import { validateBody } from '../middleware/validation'
 import { authMiddleware, creatorMiddleware } from '../middleware/auth'
 import * as creatorService from '../services/creator.service'

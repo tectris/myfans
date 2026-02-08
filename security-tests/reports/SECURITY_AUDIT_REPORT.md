@@ -1,4 +1,4 @@
-# MyFans Platform — Relatório de Auditoria de Segurança Interna
+# FanDreams Platform — Relatório de Auditoria de Segurança Interna
 
 **Versão da Plataforma:** API v2.4.0
 **Data:** 2026-02-08
@@ -446,7 +446,7 @@ Para consolidar este relatório com o teste externo (Python scanner), execute:
 ```bash
 # No CodeSandbox ou ambiente Python:
 pip install requests
-python myfans_security_scanner.py --target https://api.myfans.my --output ./reports
+python fandreams_security_scanner.py --target https://api.fandreams.app --output ./reports
 
 # Copie o conteúdo de external_scan_report.json e cole no prompt do Claude
 # com a mensagem: "Consolide este relatório externo com a auditoria interna"

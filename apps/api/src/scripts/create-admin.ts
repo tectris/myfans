@@ -2,7 +2,7 @@ import 'dotenv/config'
 import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { eq } from 'drizzle-orm'
-import { users, userSettings, fancoinWallets, userGamification, creatorProfiles } from '@myfans/database'
+import { users, userSettings, fancoinWallets, userGamification, creatorProfiles } from '@fandreams/database'
 import bcrypt from 'bcryptjs'
 
 if (!process.env.DATABASE_URL) {
@@ -10,10 +10,10 @@ if (!process.env.DATABASE_URL) {
   process.exit(1)
 }
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@myfans.com'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@fandreams.app'
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin@2024!'
-const ADMIN_DISPLAY_NAME = process.env.ADMIN_DISPLAY_NAME || 'MyFans Admin'
+const ADMIN_DISPLAY_NAME = process.env.ADMIN_DISPLAY_NAME || 'FanDreams Admin'
 
 const sql = neon(process.env.DATABASE_URL)
 const db = drizzle(sql)

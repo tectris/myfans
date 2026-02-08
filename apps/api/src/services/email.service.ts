@@ -51,11 +51,11 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
 
   return sendEmail({
     to,
-    subject: 'Verifique seu email - MyFans',
+    subject: 'Verifique seu email - FanDreams',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #e11d48;">MyFans</h2>
-        <p>Bem-vindo ao MyFans! Clique no botao abaixo para verificar seu email:</p>
+        <h2 style="color: #e11d48;">FanDreams</h2>
+        <p>Bem-vindo ao FanDreams! Clique no botao abaixo para verificar seu email:</p>
         <a href="${verifyUrl}" style="display: inline-block; background: #e11d48; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin: 16px 0;">
           Verificar Email
         </a>
@@ -72,10 +72,10 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
 
   return sendEmail({
     to,
-    subject: 'Redefinir senha - MyFans',
+    subject: 'Redefinir senha - FanDreams',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #e11d48;">MyFans</h2>
+        <h2 style="color: #e11d48;">FanDreams</h2>
         <p>Voce solicitou a redefinicao de senha. Clique no botao abaixo:</p>
         <a href="${resetUrl}" style="display: inline-block; background: #e11d48; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin: 16px 0;">
           Redefinir Senha

@@ -1,4 +1,4 @@
-# MyFans
+# FanDreams
 
 Plataforma de monetizacao para criadores de conteudo com a menor taxa do mercado (12%), gamificacao profunda e FanCoins.
 
@@ -12,7 +12,7 @@ Plataforma de monetizacao para criadores de conteudo com a menor taxa do mercado
 ## Estrutura
 
 ```
-myfans/
+fandreams/
 ├── apps/
 │   ├── web/          # Next.js 15 (Vercel)
 │   └── api/          # Hono API (Railway)

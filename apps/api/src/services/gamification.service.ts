@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
-import { userGamification, userBadges, badges, dailyMissions, userMissionProgress } from '@myfans/database'
+import { userGamification, userBadges, badges, dailyMissions, userMissionProgress } from '@fandreams/database'
 import { db } from '../config/database'
-import { XP_REWARDS, FAN_TIERS, LEVEL_THRESHOLDS } from '@myfans/shared'
+import { XP_REWARDS, FAN_TIERS, LEVEL_THRESHOLDS } from '@fandreams/shared'
 import { rewardEngagement } from './fancoin.service'
 
 export async function getGamificationProfile(userId: string) {

@@ -1,8 +1,8 @@
 import { eq, desc, and, or, sql, inArray, gt } from 'drizzle-orm'
-import { posts, postMedia, postLikes, postComments, postBookmarks, subscriptions, users, creatorProfiles, fancoinTransactions, postViews } from '@myfans/database'
+import { posts, postMedia, postLikes, postComments, postBookmarks, subscriptions, users, creatorProfiles, fancoinTransactions, postViews } from '@fandreams/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
-import type { CreatePostInput, UpdatePostInput } from '@myfans/shared'
+import type { CreatePostInput, UpdatePostInput } from '@fandreams/shared'
 
 export async function createPost(creatorId: string, input: CreatePostInput) {
   // Block media upload for users without KYC verification (admins bypass)

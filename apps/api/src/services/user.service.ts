@@ -1,9 +1,9 @@
 import { eq, and, gt, sql } from 'drizzle-orm'
-import { users, userSettings, creatorProfiles, userGamification, fancoinWallets, follows, posts, profileViewLogs } from '@myfans/database'
+import { users, userSettings, creatorProfiles, userGamification, fancoinWallets, follows, posts, profileViewLogs } from '@fandreams/database'
 import { db } from '../config/database'
 import { AppError } from './auth.service'
 import { hashPassword, verifyPassword } from '../utils/password'
-import type { UpdateProfileInput, UpdateSettingsInput } from '@myfans/shared'
+import type { UpdateProfileInput, UpdateSettingsInput } from '@fandreams/shared'
 
 export async function getProfile(userId: string) {
   const [user] = await db

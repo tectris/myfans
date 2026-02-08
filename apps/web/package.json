@@ -1,5 +1,5 @@
 {
-  "name": "@myfans/web",
+  "name": "@fandreams/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
-    "@myfans/shared": "workspace:*",
+    "@fandreams/shared": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
     "clsx": "^2.1.0",
     "date-fns": "^4.1.0",

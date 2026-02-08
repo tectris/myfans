@@ -1,9 +1,9 @@
 import { eq, and } from 'drizzle-orm'
-import { payments } from '@myfans/database'
+import { payments } from '@fandreams/database'
 import { db } from '../config/database'
 import { env } from '../config/env'
 import { AppError } from './auth.service'
-import { FANCOIN_PACKAGES, PLATFORM_FEES } from '@myfans/shared'
+import { FANCOIN_PACKAGES, PLATFORM_FEES } from '@fandreams/shared'
 import * as fancoinService from './fancoin.service'
 
 // ── MercadoPago ──
@@ -180,7 +180,7 @@ export async function createFancoinPayment(
 // ── MercadoPago Payment ──
 
 async function createMpPayment(payment: any, pkg: any, paymentMethod: string, appUrl: string) {
-  const apiUrl = env.NEXT_PUBLIC_APP_URL?.replace('://www.', '://api.').replace('://', '://api.') || 'https://api.myfans.my'
+  const apiUrl = env.NEXT_PUBLIC_APP_URL?.replace('://www.', '://api.').replace('://', '://api.') || 'https://api.fandreams.app'
 
   const preference = await mpFetch<MpPreference>('/checkout/preferences', {
     method: 'POST',
@@ -188,7 +188,7 @@ async function createMpPayment(payment: any, pkg: any, paymentMethod: string, ap
       items: [
         {
           title: `${pkg.coins.toLocaleString()} FanCoins${pkg.bonus > 0 ? ` (+${pkg.bonus} bonus)` : ''}`,
-          description: `Pacote ${pkg.label} - MyFans`,
+          description: `Pacote ${pkg.label} - FanDreams`,
           quantity: 1,
           currency_id: 'BRL',
           unit_price: pkg.price,
@@ -205,8 +205,8 @@ async function createMpPayment(payment: any, pkg: any, paymentMethod: string, ap
         pending: `${appUrl}/wallet?payment=pending&provider=mercadopago`,
       },
       auto_return: 'approved',
-      notification_url: `https://api.myfans.my/api/v1/payments/webhook/mercadopago`,
-      statement_descriptor: 'MYFANS',
+      notification_url: `https://api.fandreams.app/api/v1/payments/webhook/mercadopago`,
+      statement_descriptor: 'FANDREAMS',
     }),
   })
 
@@ -240,8 +240,8 @@ async function createNpPayment(payment: any, pkg: any, appUrl: string) {
       price_amount: priceUsd,
       price_currency: 'usd',
       order_id: payment.id,
-      order_description: `${pkg.coins.toLocaleString()} FanCoins - MyFans`,
-      ipn_callback_url: `https://api.myfans.my/api/v1/payments/webhook/nowpayments`,
+      order_description: `${pkg.coins.toLocaleString()} FanCoins - FanDreams`,
+      ipn_callback_url: `https://api.fandreams.app/api/v1/payments/webhook/nowpayments`,
       success_url: `${appUrl}/wallet?payment=success&provider=nowpayments`,
       cancel_url: `${appUrl}/wallet?payment=failure&provider=nowpayments`,
     }),
@@ -275,7 +275,7 @@ async function createPpPayment(payment: any, pkg: any, appUrl: string) {
       purchase_units: [
         {
           reference_id: payment.id,
-          description: `${pkg.coins.toLocaleString()} FanCoins - MyFans`,
+          description: `${pkg.coins.toLocaleString()} FanCoins - FanDreams`,
           amount: {
             currency_code: 'BRL',
             value: pkg.price.toFixed(2),
@@ -283,7 +283,7 @@ async function createPpPayment(payment: any, pkg: any, appUrl: string) {
         },
       ],
       application_context: {
-        brand_name: 'MyFans',
+        brand_name: 'FanDreams',
         return_url: `${appUrl}/wallet?payment=success&provider=paypal&orderId=${payment.id}`,
         cancel_url: `${appUrl}/wallet?payment=failure&provider=paypal`,
         user_action: 'PAY_NOW',

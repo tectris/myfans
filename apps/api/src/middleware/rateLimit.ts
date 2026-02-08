@@ -39,7 +39,7 @@ async function getLimiter(config: RateLimitConfig): Promise<any> {
   const limiter = new RatelimitClass({
     redis,
     limiter: RatelimitClass.slidingWindow(config.requests, config.window),
-    prefix: config.prefix || 'myfans_rl',
+    prefix: config.prefix || 'fandreams_rl',
     analytics: true,
   })
 
